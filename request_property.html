@@ -1,0 +1,511 @@
+<div class="p-3.5 max-w-md mx-auto bg-[#0d0d0d] text-white rounded-2xl border border-zinc-800 shadow-2xl select-none relative my-2">
+    
+    <!-- Compact Header -->
+    <div class="pb-3 border-b border-zinc-800 mb-3 flex justify-between items-center">
+        <strong class="text-xs font-black text-zinc-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-magnifying-glass text-cyan-400 text-xs"></i> البحث واطلب عقارك الذكي
+        </strong>
+        <span onclick="if(typeof loadPage === 'function') loadPage('home')" class="text-zinc-500 cursor-pointer text-xs hover:text-red-500 transition w-6 h-6 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+        </span>
+    </div>
+
+    <!-- Step 1: Flow Type Selection (Compact) -->
+    <div class="mb-3">
+        <div class="grid grid-cols-2 gap-1.5 p-1 bg-[#121218] rounded-xl border border-zinc-800/80">
+            <button type="button" id="btn-flow-resale" onclick="setSearchFlow('resale')" class="py-1.5 bg-red-600 text-white rounded-lg text-[11px] font-bold transition shadow-sm flex items-center justify-center gap-1">
+                <i class="fa-solid fa-house-user"></i> ريسيل (Resale)
+            </button>
+            <button type="button" id="btn-flow-premium" onclick="setSearchFlow('premium')" class="py-1.5 bg-transparent text-zinc-400 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-building-flag"></i> بريميري (Premium)
+            </button>
+        </div>
+    </div>
+
+    <!-- Step 2: Dynamic Categories (Compact Side-by-Side) -->
+    <div class="grid grid-cols-2 gap-2 mb-2.5">
+        <div>
+            <label class="block text-[10px] font-bold text-zinc-400 mb-1">القسم الرئيسي:</label>
+            <select id="search-main-category" onchange="onMainCategoryChange(this.value)" class="w-full bg-[#121218] border border-zinc-800 text-white p-2 rounded-lg text-[11px] focus:border-cyan-500 focus:outline-none transition truncate">
+                <option value="">جاري التحميل...</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-bold text-zinc-400 mb-1">النوع الفرعي:</label>
+            <select id="search-sub-category" class="w-full bg-[#121218] border border-zinc-800 text-white p-2 rounded-lg text-[11px] focus:border-cyan-500 focus:outline-none transition truncate" disabled>
+                <option value="">اختر القسم أولاً</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Step 3: Governorates & Cities -->
+    <div class="grid grid-cols-2 gap-2 mb-2.5">
+        <div>
+            <label class="block text-[10px] font-bold text-zinc-400 mb-1">المحافظة:</label>
+            <select id="search-gov" onchange="onGovChange(this.value)" class="w-full bg-[#121218] border border-zinc-800 text-white p-2 rounded-lg text-[11px] focus:border-cyan-500 focus:outline-none transition truncate">
+                <option value="">كل المحافظات</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-[10px] font-bold text-zinc-400 mb-1">المدينة / المنطقة:</label>
+            <select id="search-city" class="w-full bg-[#121218] border border-zinc-800 text-white p-2 rounded-lg text-[11px] focus:border-cyan-500 focus:outline-none transition truncate" disabled>
+                <option value="">اختر المحافظة أولاً</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Step 4: Price & Area Ranges (Formatted Numbers) -->
+    <div class="grid grid-cols-2 gap-2 mb-3">
+        <div>
+            <label class="block text-[10px] font-bold text-zinc-400 mb-1">السعر (ج.م):</label>
+            <div class="flex gap-1">
+                <input type="text" id="search-price-min" placeholder="أدنى" oninput="formatInputPrice(this)" class="w-1/2 bg-[#121218] border border-zinc-800 text-white p-2 rounded-lg text-[11px] focus:border-cyan-500 focus:outline-none text-center">
+                <input type="text" id="search-price-max" placeholder="أقصى" oninput="formatInputPrice(this)" class="w-1/2 bg-[#121218] border border-zinc-800 text-white p-2 rounded-lg text-[11px] focus:border-cyan-500 focus:outline-none text-center">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-bold text-zinc-400 mb-1">المساحة (م²):</label>
+            <div class="flex gap-1">
+                <input type="number" id="search-area-min" placeholder="من" class="w-1/2 bg-[#121218] border border-zinc-800 text-white p-2 rounded-lg text-[11px] focus:border-cyan-500 focus:outline-none text-center">
+                <input type="number" id="search-area-max" placeholder="إلى" class="w-1/2 bg-[#121218] border border-zinc-800 text-white p-2 rounded-lg text-[11px] focus:border-cyan-500 focus:outline-none text-center">
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-1.5">
+        <button onclick="executeRealEstateSearch()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-500 text-white font-black text-xs shadow-md shadow-cyan-950/40 active:scale-[0.98] transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-magnifying-glass text-[10px]"></i> بحث
+        </button>
+
+        <button onclick="sendDirectBrokerRequest()" class="py-2.5 px-3 rounded-xl bg-[#121218] border border-amber-500/40 text-amber-400 font-bold text-[11px] hover:bg-amber-500/10 active:scale-[0.98] transition flex items-center justify-center gap-1 shrink-0">
+            <i class="fa-solid fa-paper-plane text-[10px]"></i> اطلب للبروكر
+        </button>
+    </div>
+
+    <!-- Results Container -->
+    <div id="search-results-container" class="mt-4 space-y-2"></div>
+
+    <!-- Custom Dialog / Modal Overlay -->
+    <div id="ui-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-3 transition-all">
+        <div class="bg-[#121218] border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl space-y-3">
+            <div class="flex items-center gap-2.5">
+                <div id="modal-icon-bg" class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                    <i id="modal-icon" class="fa-solid fa-circle-info text-xs"></i>
+                </div>
+                <div>
+                    <h3 id="modal-title" class="text-xs font-black text-white">عنوان التنبيه</h3>
+                    <p id="modal-subtitle" class="text-[9px] text-zinc-400">إشعار من المنصة</p>
+                </div>
+            </div>
+
+            <div id="modal-body" class="text-[11px] text-zinc-300 leading-relaxed border-t border-zinc-800/80 pt-2"></div>
+
+            <div id="modal-actions" class="flex gap-1.5 pt-1">
+                <button id="modal-btn-confirm" class="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-lg transition">تأكيد</button>
+                <button id="modal-btn-cancel" onclick="closeAppModal()" class="py-2 px-3 bg-zinc-800 text-zinc-400 hover:text-white font-bold text-xs rounded-lg transition">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Egyptian Governorates & Cities Database
+    const EGYPT_GOVERNORATES = {
+        "القاهرة": ["القاهرة الجديدة", "التجمع الخامس", "مدينة نصر", "المعادي", "الشروق", "مدينتي", "العاصمة الإدارية", "مصر الجديدة", "المقطم", "الرحاب", "بدر"],
+        "الجيزة": ["6 أكتوبر", "الشيخ زايد", "حدائق أكتوبر", "أكتوبر الجديدة", "الهرم", "فيصل", "الدقي", "المهندسين", "الرماية"],
+        "الإسكندرية": ["السموحة", "ميامي", "المنتزه", "العجمي", "جليم", "ستانلي", "سيدي بشر", "برج العرب"],
+        "القليوبية": ["بنها", "شبرا الخيمة", "العبور", "الخانكة", "طوخ"],
+        "الشرقية": ["الزقازيق", "العاشر من رمضان", "بلبيس", "منيا القمح"],
+        "الدقهلية": ["المنصورة", "المنصورة الجديدة", "طلخا", "جمصة"],
+        "البحيرة": ["دمنهور", "كفر الدوار", "إيتاي البارود"],
+        "المنوفية": ["شبين الكوم", "مدينة السادات", "منوف"],
+        "الغربية": ["طنطا", "المحلة الكبرى", "زفتى"],
+        "كفر الشيخ": ["كفر الشيخ", "دسوق", "بلطيم"],
+        "دمياط": ["دمياط", "دمياط الجديدة", "رأس البر"],
+        "بورسعيد": ["حي الشرق", "حي المناخ", "بورفؤاد"],
+        "الإسماعيلية": ["الإسماعيلية", "فايد", "القنطرة"],
+        "السويس": ["السويس", "حي أتاقة", "عين السخنة"],
+        "شمال سيناء": ["العريش", "بئر العبد"],
+        "جنوب سيناء": ["شرم الشيخ", "دهب", "رأس سدر", "نويبع"],
+        "الفيوم": ["الفيوم", "الفيوم الجديدة", "سنورس"],
+        "بني سويف": ["بني سويف", "بني سويف الجديدة"],
+        "المنيا": ["المنيا", "المنيا الجديدة", "ملوي"],
+        "أسيوط": ["أسيوط", "أسيوط الجديدة", "ديروط"],
+        "سوهاج": ["سوهاج", "سوهاج الجديدة", "أخميم"],
+        "قنا": ["قنا", "قنا الجديدة", "نجع حمادي"],
+        "الأقصر": ["الأقصر", "الأقصر الجديدة", "إسنا"],
+        "أسوان": ["أسوان", "أسوان الجديدة", "كوم أمبو"],
+        "البحر الأحمر": ["الغردقة", "الجونة", "سهل حشيش", "مرسى علم"],
+        "الوادي الجديد": ["الخارجة", "الداخلة"],
+        "مطروح": ["الساحل الشمالي", "مرسى مطروح", "العلمين الجديدة"]
+    };
+
+    let searchFlow = 'resale';
+    let categoriesConfig = {};
+
+    initSearchPage();
+
+    function initSearchPage() {
+        populateGovernorates();
+        loadSearchCategories();
+    }
+
+    // Modal Controller
+    window.showAppModal = function({ title, subtitle, body, icon, type = 'info', onConfirm = null }) {
+        const modal = document.getElementById('ui-modal');
+        const mTitle = document.getElementById('modal-title');
+        const mSubtitle = document.getElementById('modal-subtitle');
+        const mBody = document.getElementById('modal-body');
+        const mIcon = document.getElementById('modal-icon');
+        const mIconBg = document.getElementById('modal-icon-bg');
+        const confirmBtn = document.getElementById('modal-btn-confirm');
+
+        mTitle.innerText = title || 'تنبيه';
+        mSubtitle.innerText = subtitle || 'إشعار من المنصة';
+        mBody.innerHTML = body || '';
+        mIcon.className = icon || 'fa-solid fa-circle-info';
+
+        if(type === 'danger') {
+            mIconBg.className = "w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0";
+            confirmBtn.className = "flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg transition";
+        } else if(type === 'warning') {
+            mIconBg.className = "w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0";
+            confirmBtn.className = "flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition";
+        } else {
+            mIconBg.className = "w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0";
+            confirmBtn.className = "flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-lg transition";
+        }
+
+        if(onConfirm) {
+            confirmBtn.style.display = 'block';
+            confirmBtn.onclick = () => {
+                onConfirm();
+                closeAppModal();
+            };
+        } else {
+            confirmBtn.style.display = 'none';
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+
+    window.closeAppModal = function() {
+        const modal = document.getElementById('ui-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    };
+
+    // Auto Format Price Inputs with Commas
+    window.formatInputPrice = function(input) {
+        let value = input.value.replace(/,/g, '').replace(/\D/g, '');
+        if (value) {
+            input.value = Number(value).toLocaleString('en-US');
+        } else {
+            input.value = '';
+        }
+    };
+
+    function parseFormattedNumber(valStr) {
+        if (!valStr) return 0;
+        return parseFloat(valStr.replace(/,/g, '')) || 0;
+    }
+
+    // Populate Governorates
+    function populateGovernorates() {
+        const govSelect = document.getElementById('search-gov');
+        if (!govSelect) return;
+        govSelect.innerHTML = '<option value="">كل المحافظات</option>';
+        Object.keys(EGYPT_GOVERNORATES).forEach(gov => {
+            govSelect.innerHTML += `<option value="${gov}">${gov}</option>`;
+        });
+    }
+
+    window.onGovChange = function(selectedGov) {
+        const citySelect = document.getElementById('search-city');
+        if (!citySelect) return;
+        citySelect.innerHTML = '<option value="">كل المناطق والمدن</option>';
+        
+        if (!selectedGov || !EGYPT_GOVERNORATES[selectedGov]) {
+            citySelect.disabled = true;
+            return;
+        }
+
+        citySelect.disabled = false;
+        EGYPT_GOVERNORATES[selectedGov].forEach(city => {
+            citySelect.innerHTML += `<option value="${city}">${city}</option>`;
+        });
+    };
+
+    // Flow Switcher
+    window.setSearchFlow = function(flow) {
+        searchFlow = flow;
+        const btnResale = document.getElementById('btn-flow-resale');
+        const btnPremium = document.getElementById('btn-flow-premium');
+
+        if (flow === 'resale') {
+            btnResale.className = "py-1.5 bg-red-600 text-white rounded-lg text-[11px] font-bold transition shadow-sm flex items-center justify-center gap-1";
+            btnPremium.className = "py-1.5 bg-transparent text-zinc-400 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1";
+        } else {
+            btnPremium.className = "py-1.5 bg-cyan-600 text-white rounded-lg text-[11px] font-bold transition shadow-sm flex items-center justify-center gap-1";
+            btnResale.className = "py-1.5 bg-transparent text-zinc-400 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1";
+        }
+
+        loadSearchCategories();
+    };
+
+    // Load Firestore Categories
+    function loadSearchCategories() {
+        if (typeof db === 'undefined') return;
+
+        const docName = (searchFlow === 'premium') ? 'premium_categories' : 'categories';
+        
+        db.collection('settings').doc(docName).get().then(doc => {
+            const mainSelect = document.getElementById('search-main-category');
+            const subSelect = document.getElementById('search-sub-category');
+            if (!mainSelect) return;
+
+            mainSelect.innerHTML = '<option value="">كل الأقسام</option>';
+            if (subSelect) {
+                subSelect.innerHTML = '<option value="">اختر القسم أولاً</option>';
+                subSelect.disabled = true;
+            }
+
+            if (!doc.exists) return;
+
+            categoriesConfig = doc.data() || {};
+            delete categoriesConfig.secret_key;
+
+            Object.keys(categoriesConfig).forEach(key => {
+                const item = categoriesConfig[key];
+                mainSelect.innerHTML += `<option value="${key}">${item.name || key}</option>`;
+            });
+        }).catch(err => console.error("Error loading categories:", err));
+    }
+
+    window.onMainCategoryChange = function(mainKey) {
+        const subSelect = document.getElementById('search-sub-category');
+        if (!subSelect) return;
+        subSelect.innerHTML = '<option value="">كل الأنواع الفرعية</option>';
+
+        if (!mainKey || !categoriesConfig[mainKey]) {
+            subSelect.disabled = true;
+            return;
+        }
+
+        subSelect.disabled = false;
+        const subs = categoriesConfig[mainKey].subDetails || {};
+
+        Object.keys(subs).forEach(sKey => {
+            const sub = subs[sKey];
+            const nameStr = sub.name || '';
+            const namesArray = nameStr.includes('،') ? nameStr.split('،') : nameStr.split(',');
+            namesArray.forEach(name => {
+                const trimmed = name.trim();
+                if (trimmed) subSelect.innerHTML += `<option value="${trimmed}">${trimmed}</option>`;
+            });
+        });
+    };
+
+    // Direct Request Handler - Saves to NEW separate collection 'broker_requests'
+    window.sendDirectBrokerRequest = function() {
+        if(typeof auth === 'undefined' || !auth.currentUser) {
+            showAppModal({
+                title: "تسجيل الدخول مطلوب",
+                subtitle: "اطلب عقارك",
+                body: "يرجى تسجيل الدخول أولاً لتتمكن من إرسال هذا الطلب للشركات والبروكية.",
+                icon: "fa-solid fa-user-lock",
+                type: "warning"
+            });
+            return;
+        }
+
+        const gov = document.getElementById('search-gov').value || 'كل المحافظات';
+        const city = document.getElementById('search-city').value || 'كل المناطق';
+        const mainCatKey = document.getElementById('search-main-category').value;
+        const mainCatName = mainCatKey && categoriesConfig[mainCatKey] ? categoriesConfig[mainCatKey].name : 'عقار عام';
+        const subType = document.getElementById('search-sub-category').value || 'الكل';
+        
+        const minPrice = document.getElementById('search-price-min').value || 'غير محدد';
+        const maxPrice = document.getElementById('search-price-max').value || 'غير محدد';
+        const minArea = document.getElementById('search-area-min').value || 'غير محدد';
+        const maxArea = document.getElementById('search-area-max').value || 'غير محدد';
+
+        const modalBody = `
+            <div class="space-y-2">
+                <div class="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] space-y-1">
+                    <p class="text-zinc-300"><strong class="text-amber-400">التصنيف:</strong> ${mainCatName} (${subType})</p>
+                    <p class="text-zinc-300"><strong class="text-amber-400">الموقع:</strong> ${gov} - ${city}</p>
+                    <p class="text-zinc-300"><strong class="text-amber-400">السعر:</strong> من ${minPrice} إلى ${maxPrice} ج.م</p>
+                </div>
+                <input type="number" id="broker-req-phone" placeholder="رقم الهاتف للتواصل (واتساب)" class="w-full bg-[#0d0d0d] border border-zinc-800 text-white p-2 rounded-lg text-xs focus:border-amber-500 focus:outline-none">
+                <textarea id="broker-req-notes" rows="2" placeholder="أي ملاحظات إضافية؟ (اختياري)" class="w-full bg-[#0d0d0d] border border-zinc-800 text-white p-2 rounded-lg text-xs focus:border-amber-500 focus:outline-none resize-none"></textarea>
+            </div>
+        `;
+
+        showAppModal({
+            title: "إرسال الطلب للمسوقين والبروكية",
+            subtitle: "سيتم حفظ الطلب في قائمة طلبات المشترين",
+            body: modalBody,
+            icon: "fa-solid fa-paper-plane",
+            type: "warning",
+            onConfirm: async () => {
+                const phone = document.getElementById('broker-req-phone').value.trim();
+                const notes = document.getElementById('broker-req-notes').value.trim();
+
+                if(!phone) {
+                    alert('يرجى إدخال رقم الهاتف للتواصل.');
+                    return;
+                }
+
+                try {
+                    // Saved directly to dedicated separate collection: 'broker_requests'
+                    await db.collection('broker_requests').add({
+                        userId: auth.currentUser.uid,
+                        userEmail: auth.currentUser.email || '',
+                        flowType: searchFlow,
+                        mainType: mainCatKey,
+                        mainTypeName: mainCatName,
+                        subType: subType,
+                        governorate: gov,
+                        city: city,
+                        minPrice: minPrice,
+                        maxPrice: maxPrice,
+                        minArea: minArea,
+                        maxArea: maxArea,
+                        phone: phone,
+                        notes: notes,
+                        status: 'active',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    showAppModal({
+                        title: "تم إرسال طلبك بنجاح!",
+                        subtitle: "طلبات البروكر",
+                        body: "تم نشر بيانات طلبك في لوحة طلبات العقارات فوراً وسيتواصل معك البروكية المعتمدون.",
+                        icon: "fa-solid fa-circle-check",
+                        type: "info"
+                    });
+                } catch(e) {
+                    showAppModal({
+                        title: "خطأ أثناء الإرسال",
+                        subtitle: "حاول مرة أخرى",
+                        body: e.message,
+                        icon: "fa-solid fa-triangle-exclamation",
+                        type: "danger"
+                    });
+                }
+            }
+        });
+    };
+
+    // Execute Search Query
+    window.executeRealEstateSearch = async function() {
+        const resultsContainer = document.getElementById('search-results-container');
+        if (!resultsContainer) return;
+
+        resultsContainer.innerHTML = `
+            <div class="text-center text-zinc-500 text-xs py-6 animate-pulse">
+                <i class="fa-solid fa-circle-notch fa-spin text-cyan-400 text-base mb-1 block"></i>
+                جاري البحث في العقارات...
+            </div>`;
+
+        if (typeof db === 'undefined') {
+            resultsContainer.innerHTML = `<div class="text-center text-red-400 text-xs py-2">خطأ: تعذر الاتصال بـ Firebase</div>`;
+            return;
+        }
+
+        const targetCollection = (searchFlow === 'premium') ? 'premium_ads' : 'ads';
+        let query = db.collection(targetCollection);
+
+        const mainType = document.getElementById('search-main-category').value;
+        const subType = document.getElementById('search-sub-category').value;
+        const gov = document.getElementById('search-gov').value;
+        const city = document.getElementById('search-city').value;
+        
+        const minPrice = parseFormattedNumber(document.getElementById('search-price-min').value);
+        const maxPrice = parseFormattedNumber(document.getElementById('search-price-max').value) || Infinity;
+        
+        const minArea = parseFloat(document.getElementById('search-area-min').value) || 0;
+        const maxArea = parseFloat(document.getElementById('search-area-max').value) || Infinity;
+
+        if (mainType) query = query.where('mainType', '==', mainType);
+        if (subType) query = query.where('subType', '==', subType);
+
+        try {
+            const snapshot = await query.get();
+
+            if (snapshot.empty) {
+                renderNoResults(resultsContainer);
+                return;
+            }
+
+            let results = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const price = parseFloat(data.price) || 0;
+                const area = parseFloat(data.area) || 0;
+                const locationText = data.location || '';
+
+                const matchesPrice = price >= minPrice && price <= maxPrice;
+                const matchesArea = area >= minArea && area <= maxArea;
+                const matchesGov = !gov || locationText.includes(gov);
+                const matchesCity = !city || locationText.includes(city);
+
+                if (matchesPrice && matchesArea && matchesGov && matchesCity) {
+                    results.push({ id: doc.id, ...data });
+                }
+            });
+
+            if (results.length === 0) {
+                renderNoResults(resultsContainer);
+                return;
+            }
+
+            // Render Results with Direct Independent File Navigation
+            resultsContainer.innerHTML = `<p class="text-[11px] font-bold text-zinc-400 mb-1.5">نتائج البحث (${results.length}):</p>`;
+            
+            // تحديد الملف المستهدف كصفحة مستقلة مباشرة
+            const targetFile = (searchFlow === 'premium') ? 'premium_details.html' : 'details.html';
+
+            results.forEach(ad => {
+                const imgUrl = (ad.allImages && ad.allImages.length > 0) ? ad.allImages[0] : (ad.image || 'https://via.placeholder.com/80');
+                const formattedPrice = ad.price ? Number(ad.price).toLocaleString('en-US') + ' ج.م' : 'غير محدد';
+
+                resultsContainer.innerHTML += `
+                    <div onclick="window.location.href='${targetFile}?id=${ad.id}'" class="p-2.5 bg-[#121218] border border-zinc-800 hover:border-cyan-500/50 rounded-xl flex gap-2.5 items-center shadow-sm cursor-pointer transition group">
+                        <img src="${imgUrl}" class="w-16 h-16 rounded-lg object-cover shrink-0 bg-zinc-900 border border-zinc-800">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-xs font-black text-white truncate group-hover:text-cyan-400 transition">${ad.title || 'بدون عنوان'}</h4>
+                            <p class="text-[11px] text-cyan-400 font-black mt-0.5">${formattedPrice}</p>
+                            <p class="text-[9px] text-zinc-400 truncate mt-0.5"><i class="fa-solid fa-location-dot text-zinc-500"></i> ${ad.location || 'غير محدد'}</p>
+                            <div class="flex gap-1.5 mt-1">
+                                <span class="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 text-[8px] text-zinc-300 rounded font-bold">${ad.subType || ad.mainTypeName || 'عقار'}</span>
+                                <span class="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 text-[8px] text-amber-400 rounded font-bold">${ad.area ? ad.area + ' م²' : 'غير محددة'}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+        } catch (error) {
+            console.error("Search Error:", error);
+            resultsContainer.innerHTML = `<div class="text-center text-red-400 text-xs py-2">حدث خطأ أثناء تحميل البيانات: ${error.message}</div>`;
+        }
+    };
+
+    function renderNoResults(container) {
+        container.innerHTML = `
+            <div class="text-center py-5 px-3 bg-[#121218] rounded-xl border border-zinc-800 space-y-2">
+                <i class="fa-solid fa-building-circle-xmark text-zinc-600 text-2xl"></i>
+                <p class="text-[11px] text-zinc-400 font-bold">لم تجد عقاراً يطابق هذه المواصفات؟</p>
+                <button onclick="sendDirectBrokerRequest()" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition shadow-md flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-paper-plane text-[10px]"></i> إرسال هذه المواصفات فوراً للبروكية
+                </button>
+            </div>`;
+    }
+})();
+</script>

@@ -1,0 +1,631 @@
+<!-- حاوية التنبيهات السريعة (Toast System) -->
+<div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[110] flex flex-col gap-2 w-full max-w-xs px-4 pointer-events-none"></div>
+
+<!-- المحتوى الرئيسي -->
+<div id="main-content" class="w-full max-w-7xl mx-auto py-4 md:py-10 px-3 md:px-8 pb-28 bg-[#09090b] min-h-screen text-zinc-100 antialiased" dir="rtl">
+    
+    <!-- السلايدر الخاص بالبانرات المميزة (متجاوب وآمن تماماً ضد قفزات الشاشة) -->
+    <div class="relative w-full mb-6 md:mb-10">
+        <div id="premium-banners-slider" class="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar h-44 md:h-96 border-y md:border border-zinc-800/80 bg-zinc-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl w-full">
+            <div class="min-w-full w-full h-full shrink-0 bg-zinc-800/50 animate-pulse flex items-center justify-center text-zinc-600 text-xs md:text-base font-bold">جاري تحميل البانرات...</div>
+        </div>
+        <div id="slider-dots" class="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 md:gap-2 bg-black/40 backdrop-blur-md px-3 md:px-5 py-1.5 md:py-2 rounded-full border border-white/10 pointer-events-auto"></div>
+    </div>
+
+    <!-- شريط البحث واختيار المحافظة والمدينة بتصميم متجاوب واحترافي -->
+    <div class="space-y-3 mb-8 md:mb-12 max-w-3xl md:max-w-4xl mx-auto px-1">
+        <!-- البحث النصي -->
+        <div class="bg-zinc-900/90 backdrop-blur-md p-3.5 md:p-5 rounded-2xl md:rounded-3xl border border-zinc-800/80 flex items-center gap-3 md:gap-4 shadow-xl focus-within:border-zinc-600 transition-all">
+            <svg class="w-4 h-4 md:w-6 md:h-6 shrink-0 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" id="main-search" oninput="renderDynamicHomePage()" placeholder="ابحث باسم المشروع، المطور، أو المنطقة..." class="bg-transparent border-none outline-none text-xs md:text-base text-white w-full font-bold placeholder:text-zinc-600">
+        </div>
+
+        <!-- أزرار اختيار المحافظة والمدينة المتجاوبة -->
+        <div class="grid grid-cols-2 gap-2.5 md:gap-4">
+            <button type="button" onclick="openLocationModal('gov')" id="gov-btn" class="w-full bg-zinc-900/90 px-3.5 md:px-5 py-3 md:py-4 rounded-2xl md:rounded-3xl border border-zinc-800/80 flex items-center justify-between text-[11px] md:text-sm text-zinc-300 font-bold hover:border-zinc-700 transition">
+                <div class="flex items-center gap-2 md:gap-3 truncate">
+                    <svg class="w-3.5 h-3.5 md:w-5 md:h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                    <span id="gov-label" class="truncate">كل المحافظات</span>
+                </div>
+                <svg class="w-3 h-3 md:w-4 md:h-4 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+
+            <button type="button" onclick="openLocationModal('city')" id="city-btn" class="w-full bg-zinc-900/90 px-3.5 md:px-5 py-3 md:py-4 rounded-2xl md:rounded-3xl border border-zinc-800/80 flex items-center justify-between text-[11px] md:text-sm text-zinc-300 font-bold hover:border-zinc-700 transition">
+                <div class="flex items-center gap-2 md:gap-3 truncate">
+                    <svg class="w-3.5 h-3.5 md:w-5 md:h-5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    <span id="city-label" class="truncate">كل المدن</span>
+                </div>
+                <svg class="w-3 h-3 md:w-4 md:h-4 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- الأقسام الديناميكية للمشاريع -->
+    <div id="dynamic-sections" class="space-y-10 md:space-y-14"></div>
+</div>
+
+<!-- نافذة التصفية والنتائج الكاملة (قائمة جانبية متجاوبة) -->
+<div id="category-overlay" class="fixed inset-y-0 left-0 md:left-auto md:right-0 z-[150] bg-[#09090b] w-full md:w-[480px] translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto p-5 md:p-8 border-r border-zinc-800 shadow-2xl" dir="rtl">
+    <div class="flex justify-between items-center mb-6 border-b border-zinc-800/80 pb-4 sticky top-0 bg-[#09090b]/95 backdrop-blur-md z-10">
+        <h2 id="overlay-title" class="font-black text-sm md:text-lg text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+            المشاريع
+        </h2>
+        <button onclick="closeOverlay()" class="w-9 h-9 md:w-11 md:h-11 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-white transition">
+            <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+    </div>
+    <div id="overlay-results-list" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 pb-10"></div>
+</div>
+
+<!-- نافذة اختيار المحافظات والمدن المخصصة -->
+<div id="location-modal" class="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300" dir="rtl">
+    <div id="location-modal-card" class="bg-zinc-900 border border-zinc-800/90 w-full max-w-sm md:max-w-md rounded-3xl p-4 md:p-6 shadow-2xl transform scale-95 transition-all duration-300 flex flex-col max-h-[65vh]">
+        
+        <div class="flex items-center justify-between pb-3 mb-2 border-b border-zinc-800/80 shrink-0">
+            <h3 id="modal-title" class="text-xs md:text-base font-black text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                اختر المحافظة
+            </h3>
+            <button onclick="closeLocationModal()" class="w-7 h-7 md:w-8 md:h-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition">
+                <svg class="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <div class="mb-2.5 shrink-0">
+            <input type="text" id="modal-search" oninput="filterModalList()" placeholder="بحث سريع..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-[11px] md:text-sm text-white outline-none focus:border-zinc-600 transition placeholder:text-zinc-600 font-bold">
+        </div>
+
+        <div id="modal-list" class="overflow-y-auto space-y-1 pr-1 custom-scrollbar flex-1"></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const egyptLocations = {
+        "القاهرة": ["التجمع الخامس", "القاهرة الجديدة", "مدينة نصر", "المعادي", "الشروق", "مدينتي", "العاصمة الإدارية", "مصر الجديدة", "الزمالك", "الرحاب", "المقطم", "عين شمس", "شبرا", "حلوان", "وسط البلد"],
+        "الجيزة": ["6 أكتوبر", "الشيخ زايد", "حدائق الأهرام", "حدائق أكتوبر", "الدقي", "المهندسين", "الهرم", "فيصل", "العجوزة", "إمبابة", "البدرشين"],
+        "الإسكندرية": ["سموحة", "المنتزه", "المعمورة", "العجمي", "سان ستيفانو", "ميامي", "سيدي بشر", "محرم بك", "لوران", "برج العرب"],
+        "البحر الأحمر": ["الغردقة", "الجونة", "سهل حشيش", "مرسى علم", "سفاجا", "رأس غارب"],
+        "جنوب سيناء": ["شرم الشيخ", "دهب", "نويبع", "راس سدر", "طابا"],
+        "مطروح": ["الساحل الشمالي", "مرسى مطروح", "العلمين الجديدة", "سيوة", "رأس الحكمة"],
+        "الشرقية": ["الزقازيق", "العاشر من رمضان", "بلبيس", "منيا القمح", "فاقوس"],
+        "الدقهلية": ["المنصورة", "المنصورة الجديدة", "طلخا", "ميت غمر", "شربين"],
+        "القليوبية": ["بنها", "شبرا الخيمة", "العبور", "الخانكة", "طوخ"],
+        "السويس": ["السويس", "العين السخنة", "حي الأربعين"],
+        "بورسعيد": ["بورسعيد", "بورفؤاد"],
+        "الإسماعيلية": ["الإسماعيلية", "القنطرة", "فايد"],
+        "الغربية": ["طنطا", "المحلة الكبرى", "زفتى"],
+        "المنوفية": ["شبين الكوم", "مدينة السادات", "أشمون"],
+        "البحيرة": ["دمنهور", "كفر الدوار", "رشيد", "وادي النطرون"],
+        "كفر الشيخ": ["كفر الشيخ", "دسوق", "بلطيم"],
+        "دمياط": ["دمياط", "دمياط الجديدة", "رأس البر"],
+        "الفيوم": ["الفيوم", "الفيوم الجديدة", "طامية"],
+        "بني سويف": ["بني سويف", "بني سويف الجديدة"],
+        "المنيا": ["المنيا", "المنيا الجديدة", "ملوي"],
+        "أسيوط": ["أسيوط", "أسيوط الجديدة", "ديروط"],
+        "سوهاج": ["سوهاج", "سوهاج الجديدة", "أخميم"],
+        "قنا": ["قنا", "قنا الجديدة", "نجع حمادي"],
+        "الأقصر": ["الأقصر", "إسنا", "أرمنت"],
+        "أسوان": ["أسوان", "أسوان الجديدة", "كوم أمبو"]
+    };
+
+    const database = window.db || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+
+    if (!database) {
+        console.error("لم يتم العثور على قاعدة البيانات db.");
+        return;
+    }
+
+    let allAds = [];
+    let bannerInterval = null;
+    let activeModalType = 'gov';
+    let currentSelectedGov = '';
+    let currentSelectedCity = '';
+
+    if (window.activeBannerInterval) {
+        clearInterval(window.activeBannerInterval);
+        window.activeBannerInterval = null;
+    }
+
+    window.showToast = (msg, type = 'info') => {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `p-3 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white text-[11px] md:text-xs font-bold shadow-2xl flex items-center gap-2 transform transition-all duration-300 translate-y-[-10px] opacity-0 pointer-events-auto`;
+        toast.innerHTML = `
+            <span class="w-2 h-2 rounded-full ${type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} shrink-0"></span>
+            <span class="flex-1">${msg}</span>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => { toast.classList.remove('translate-y-[-10px]', 'opacity-0'); }, 10);
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-[-10px]');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    };
+
+    window.openLocationModal = (type) => {
+        activeModalType = type;
+        const modal = document.getElementById('location-modal');
+        const modalCard = document.getElementById('location-modal-card');
+        const modalTitle = document.getElementById('modal-title');
+        const searchInput = document.getElementById('modal-search');
+        
+        if (type === 'gov') {
+            modalTitle.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> اختر المحافظة`;
+        } else {
+            if (!currentSelectedGov) {
+                showToast('اختر المحافظة أولاً', 'error');
+                return;
+            }
+            modalTitle.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> اختر المدينة (${currentSelectedGov})`;
+        }
+
+        if (searchInput) searchInput.value = '';
+        buildModalItems('');
+
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        modalCard.classList.remove('scale-95');
+        modalCard.classList.add('scale-100');
+    };
+
+    window.closeLocationModal = () => {
+        const modal = document.getElementById('location-modal');
+        const modalCard = document.getElementById('location-modal-card');
+        if (!modal) return;
+        
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        modalCard.classList.remove('scale-100');
+        modalCard.classList.add('scale-95');
+    };
+
+    window.filterModalList = () => {
+        const searchInput = document.getElementById('modal-search');
+        const query = searchInput ? searchInput.value.toLowerCase() : '';
+        buildModalItems(query);
+    };
+
+    function buildModalItems(query) {
+        const listContainer = document.getElementById('modal-list');
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+
+        let items = [];
+        let selectedVal = '';
+
+        if (activeModalType === 'gov') {
+            items = ['كل المحافظات', ...Object.keys(egyptLocations).sort()];
+            selectedVal = currentSelectedGov || 'كل المحافظات';
+        } else {
+            items = ['كل المدن'];
+            if (currentSelectedGov && egyptLocations[currentSelectedGov]) {
+                items.push(...egyptLocations[currentSelectedGov]);
+            }
+            selectedVal = currentSelectedCity || 'كل المدن';
+        }
+
+        const filtered = items.filter(item => item.toLowerCase().includes(query));
+
+        if (filtered.length === 0) {
+            listContainer.innerHTML = `<div class="text-center py-6 text-zinc-600 text-xs font-bold">لا توجد نتائج</div>`;
+            return;
+        }
+
+        filtered.forEach(item => {
+            const isSelected = (item === selectedVal) || (item === 'كل المحافظات' && !currentSelectedGov) || (item === 'كل المدن' && !currentSelectedCity);
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `w-full text-right px-3.5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition flex items-center justify-between ${
+                isSelected 
+                ? 'bg-red-500/10 text-red-400 border border-red-500/30' 
+                : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-white'
+            }`;
+            
+            btn.innerHTML = `
+                <span>${item}</span>
+                ${isSelected ? '<svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' : ''}
+            `;
+
+            btn.onclick = () => selectLocationItem(item);
+            listContainer.appendChild(btn);
+        });
+    }
+
+    function selectLocationItem(val) {
+        if (activeModalType === 'gov') {
+            if (val === 'كل المحافظات') {
+                currentSelectedGov = '';
+                currentSelectedCity = '';
+                document.getElementById('gov-label').innerText = 'كل المحافظات';
+                document.getElementById('city-label').innerText = 'كل المدن';
+            } else {
+                currentSelectedGov = val;
+                currentSelectedCity = '';
+                document.getElementById('gov-label').innerText = val;
+                document.getElementById('city-label').innerText = 'كل المدن';
+            }
+        } else {
+            if (val === 'كل المدن') {
+                currentSelectedCity = '';
+                document.getElementById('city-label').innerText = 'كل المدن';
+            } else {
+                currentSelectedCity = val;
+                document.getElementById('city-label').innerText = val;
+            }
+        }
+
+        closeLocationModal();
+        renderDynamicHomePage();
+    }
+
+    // جلب البنرات وتفعيل السلايدر (أفقي آمن 100% يمنع أي قفزة رأسية في الشاشة)
+    database.collection("premium_banners").onSnapshot(snapshot => {
+        const slider = document.getElementById('premium-banners-slider');
+        const dotsContainer = document.getElementById('slider-dots');
+        if (!slider) return;
+
+        if (snapshot.empty) {
+            slider.innerHTML = `<div class="min-w-full w-full h-full flex items-center justify-center text-zinc-600 text-xs md:text-base font-bold">لا توجد بنرات حصرية حالياً</div>`;
+            if (dotsContainer) dotsContainer.innerHTML = '';
+            return;
+        }
+
+        const docs = snapshot.docs;
+        slider.innerHTML = docs.map((doc, index) => `
+            <div id="banner-slide-${index}" class="min-w-full w-full h-full snap-center relative shrink-0 cursor-pointer" onclick="${doc.data().link ? `location.href='${doc.data().link}'` : ''}">
+                <img src="${doc.data().image}" class="w-full h-full object-cover">
+                ${doc.data().title ? `<div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-4 md:p-6 text-sm md:text-lg font-bold text-zinc-200">${doc.data().title}</div>` : ''}
+            </div>
+        `).join('');
+
+        if (dotsContainer) {
+            dotsContainer.innerHTML = docs.map((_, index) => `
+                <button type="button" class="banner-dot h-2 md:h-2.5 rounded-full transition-all duration-300 ${index === 0 ? 'w-5 md:w-6 bg-red-500' : 'w-2 md:w-2.5 bg-white/50 hover:bg-white'}"></button>
+            `).join('');
+        }
+
+        let currentIndex = 0;
+        if (bannerInterval) clearInterval(bannerInterval);
+        
+        bannerInterval = setInterval(() => {
+            const currentSlider = document.getElementById('premium-banners-slider');
+            if (!currentSlider) {
+                clearInterval(bannerInterval);
+                return;
+            }
+            currentIndex = (currentIndex + 1) % docs.length;
+            
+            const targetSlide = document.getElementById(`banner-slide-${currentIndex}`);
+            if (targetSlide) {
+                const scrollLeftPos = targetSlide.offsetLeft - currentSlider.offsetLeft;
+                currentSlider.scrollTo({
+                    left: scrollLeftPos,
+                    behavior: 'smooth'
+                });
+            }
+
+            if (dotsContainer) {
+                const dots = dotsContainer.querySelectorAll('.banner-dot');
+                dots.forEach((dot, idx) => {
+                    dot.className = `banner-dot h-2 md:h-2.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-5 md:w-6 bg-red-500' : 'w-2 md:w-2.5 bg-white/50 hover:bg-white'}`;
+                });
+            }
+        }, 4000);
+        
+        window.activeBannerInterval = bannerInterval;
+    }, err => console.error("خطأ في جلب البنرات:", err));
+
+    // جلب الإعلانات وتصفية المنتهي
+    database.collection("premium_ads").onSnapshot(snapshot => {
+        const now = new Date();
+        allAds = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(ad => {
+                if (!ad.expireAt) return true;
+                const expireDate = ad.expireAt.toDate ? ad.expireAt.toDate() : new Date(ad.expireAt);
+                return expireDate > now;
+            });
+
+        renderDynamicHomePage();
+    }, err => console.error("خطأ في جلب الإعلانات:", err));
+
+    function parseNumber(val) {
+        if (!val) return 0;
+        if (typeof val === 'number') return val;
+        const clean = String(val).replace(/[^0-9.]/g, '');
+        return parseFloat(clean) || 0;
+    }
+
+    function parsePremiumSpecs(ad) {
+        const specs = ad.specs || {};
+
+        let rawMin = specs['أقل سعر للمتر'] || specs['أقل سعر'] || ad.minPrice || ad.price || ad.priceFrom || 0;
+        let rawMax = specs['أعلى سعر للمتر'] || specs['أعلى سعر'] || ad.maxPrice || ad.priceTo || 0;
+
+        let minPrice = parseNumber(rawMin);
+        let maxPrice = parseNumber(rawMax);
+
+        if (minPrice > 0 && maxPrice > 0 && minPrice > maxPrice) {
+            const temp = minPrice;
+            minPrice = maxPrice;
+            maxPrice = temp;
+        }
+
+        let priceText = '';
+        if (minPrice > 0 && maxPrice > 0 && minPrice !== maxPrice) {
+            priceText = `من ${minPrice.toLocaleString('ar-EG')} إلى ${maxPrice.toLocaleString('ar-EG')} ج.م`;
+        } else if (minPrice > 0) {
+            priceText = `يبدأ من ${minPrice.toLocaleString('ar-EG')} ج.م`;
+        } else if (maxPrice > 0) {
+            priceText = `حتى ${maxPrice.toLocaleString('ar-EG')} ج.م`;
+        } else if (ad.price) {
+            priceText = String(ad.price);
+        } else {
+            priceText = 'السعر عند الاتصال';
+        }
+
+        function getSpecValue(keywords) {
+            for (const key of Object.keys(specs)) {
+                const k = key.trim().toLowerCase();
+                for (const kw of keywords) {
+                    if (k.includes(kw.toLowerCase())) {
+                        const val = specs[key];
+                        if (val !== undefined && val !== null && val !== '') return val;
+                    }
+                }
+            }
+            return '';
+        }
+
+        let rawDown = getSpecValue(['مقدم', 'down', 'deposit']) || ad.downPayment || ad.down || ad.deposit || '';
+        let downPayment = '---';
+        if (rawDown !== '' && rawDown !== null && rawDown !== undefined) {
+            let strDown = String(rawDown).trim();
+            if (/^\d+(\.\d+)?$/.test(strDown)) {
+                let num = parseFloat(strDown);
+                downPayment = num <= 100 ? `${num}%` : `${num.toLocaleString('ar-EG')} ج.م`;
+            } else {
+                downPayment = strDown;
+            }
+        }
+
+        let rawInstallment = getSpecValue(['تقسيط', 'سداد', 'installment', 'مدة', 'سنوات']) || ad.installmentYears || ad.installment || '';
+        let installmentYears = '---';
+        if (rawInstallment !== '' && rawInstallment !== null && rawInstallment !== undefined) {
+            let strInst = String(rawInstallment).trim();
+            if (/^\d+$/.test(strInst)) {
+                installmentYears = `${strInst} سنوات`;
+            } else {
+                installmentYears = strInst;
+            }
+        }
+
+        let rawDelivery = getSpecValue(['استلام', 'delivery', 'تاريخ', 'سنة', 'موعد']) || ad.deliveryDate || ad.delivery || '';
+        let deliveryDate = '---';
+        if (rawDelivery !== '' && rawDelivery !== null && rawDelivery !== undefined) {
+            deliveryDate = String(rawDelivery).trim();
+        }
+
+        let rawArea = getSpecValue(['مساحة', 'area', 'space', 'size']) || ad.area || ad.space || '';
+        let area = '---';
+        if (rawArea !== '' && rawArea !== null && rawArea !== undefined) {
+            let strArea = String(rawArea).trim();
+            area = strArea.includes('م') ? strArea : `${strArea} م²`;
+        }
+
+        const hasMasterPlan = Boolean(ad.pdfFile || ad.masterPlan || specs['المخطط'] || getSpecValue(['مخطط', 'master']));
+
+        return { minPrice, maxPrice, priceText, downPayment, installmentYears, deliveryDate, area, hasMasterPlan };
+    }
+
+    function createAdvancedCard(ad) {
+        const fallbackImg = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=500&q=80';
+        const pData = parsePremiumSpecs(ad);
+        const images = ad.allImages || (ad.image ? [ad.image] : [fallbackImg]);
+        const mainImg = images[0];
+        const ownerId = ad.userId || ad.ownerId || '';
+        const phoneNum = ad.phone || ad.phoneNumber || ad.whatsapp || '';
+
+        return `
+            <div class="min-w-[280px] max-w-[280px] md:min-w-0 md:max-w-none w-full bg-zinc-900/90 rounded-2xl md:rounded-3xl p-3 md:p-4 border border-zinc-800/80 shrink-0 md:shrink flex flex-col justify-between transition-all hover:border-zinc-700 hover:shadow-2xl snap-start">
+                
+                <div onclick="location.href='premium_details.html?id=${ad.id}'" class="cursor-pointer">
+                    <div class="relative w-full h-40 md:h-52 rounded-xl md:rounded-2xl overflow-hidden mb-3 bg-zinc-800">
+                        <img src="${mainImg}" class="w-full h-full object-cover hover:scale-105 transition duration-500" loading="lazy">
+                        <span class="absolute top-2 right-2 bg-zinc-950/80 backdrop-blur-md border border-zinc-700/60 text-white text-[9px] md:text-xs font-black px-2 py-0.5 rounded-md shadow">PREMIUM</span>
+                        ${pData.hasMasterPlan ? `<span class="absolute top-2 left-2 bg-zinc-950/80 backdrop-blur-md text-zinc-300 border border-zinc-700/50 text-[9px] md:text-xs font-bold px-2 py-0.5 rounded-md shadow flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                            Master Plan
+                        </span>` : ''}
+                        <span class="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md text-white text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-md md:rounded-xl flex items-center gap-1">
+                            <svg class="w-3 h-3 text-red-500 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                            ${ad.location || ad.city || ad.governorate || 'غير محدد'}
+                        </span>
+                    </div>
+
+                    <h4 class="text-xs md:text-sm font-bold truncate text-white mb-1">${ad.title || 'مشروع بريميري'}</h4>
+                    <p class="text-red-500 font-black text-sm md:text-base mb-2.5">${pData.priceText}</p>
+
+                    <div class="grid grid-cols-2 gap-2 bg-zinc-950/80 border border-zinc-800/80 p-2.5 rounded-xl text-center text-[10px] md:text-xs text-zinc-300 font-bold mb-3">
+                        <div class="flex flex-col items-center p-1.5 bg-zinc-900/60 rounded-lg">
+                            <span class="text-zinc-500 text-[9px] md:text-[10px] flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                المقدم
+                            </span>
+                            <span class="text-zinc-200 mt-0.5">${pData.downPayment}</span>
+                        </div>
+                        <div class="flex flex-col items-center p-1.5 bg-zinc-900/60 rounded-lg">
+                            <span class="text-zinc-500 text-[9px] md:text-[10px] flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                التقسيط
+                            </span>
+                            <span class="text-white mt-0.5">${pData.installmentYears}</span>
+                        </div>
+                        <div class="flex flex-col items-center p-1.5 bg-zinc-900/60 rounded-lg">
+                            <span class="text-zinc-500 text-[9px] md:text-[10px] flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                                الاستلام
+                            </span>
+                            <span class="text-white mt-0.5">${pData.deliveryDate}</span>
+                        </div>
+                        <div class="flex flex-col items-center p-1.5 bg-zinc-900/60 rounded-lg">
+                            <span class="text-zinc-500 text-[9px] md:text-[10px] flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                                المساحة
+                            </span>
+                            <span class="text-white mt-0.5">${pData.area}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-zinc-800/80">
+                    <a href="https://wa.me/${phoneNum.replace(/[^0-9]/g, '')}" target="_blank" onclick="event.stopPropagation()" class="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-xl py-2 md:py-2.5 flex items-center justify-center gap-1.5 text-[11px] md:text-xs font-bold transition">
+                        <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
+                        <span>واتساب</span>
+                    </a>
+
+                    <button onclick="event.stopPropagation(); if(typeof startAqaroChat === 'function') { startAqaroChat('${ownerId}', '${ad.id}') } else { location.href='direct_chat.html?brokerId=${ownerId}&adId=${ad.id}' }" class="relative w-10 h-10 md:w-11 md:h-11 shrink-0 rounded-full bg-red-600/30 border border-red-500/50 backdrop-blur-md shadow-lg shadow-red-500/20 flex items-center justify-center hover:scale-105 active:scale-95 transition group">
+                        <span class="absolute inset-0 rounded-full bg-red-500/30 animate-ping opacity-75"></span>
+                        <svg class="w-4 h-4 text-red-400 group-hover:text-white transition relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 8 9 8z"></path>
+                        </svg>
+                    </button>
+
+                    <a href="tel:${phoneNum.replace(/[^0-9+]/g, '')}" onclick="event.stopPropagation()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700/80 rounded-xl py-2 md:py-2.5 flex items-center justify-center gap-1.5 text-[11px] md:text-xs font-bold transition">
+                        <svg class="w-4 h-4 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                        <span>مكالمة</span>
+                    </a>
+                </div>
+            </div>`;
+    }
+
+    window.renderDynamicHomePage = () => {
+        const searchInput = document.getElementById('main-search');
+        const container = document.getElementById('dynamic-sections');
+        if (!container) return;
+
+        const query = searchInput ? searchInput.value.toLowerCase() : '';
+        container.innerHTML = "";
+        
+        const activeSubTypes = [...new Set(allAds.map(ad => ad.subType).filter(Boolean))];
+
+        if (activeSubTypes.length === 0 && allAds.length > 0) {
+            activeSubTypes.push('جميع المشاريع');
+        }
+
+        activeSubTypes.forEach(sub => {
+            const filtered = allAds.filter(a => {
+                const matchesSub = (sub === 'جميع المشاريع' || a.subType === sub);
+                const matchesSearch = (
+                    (a.title && a.title.toLowerCase().includes(query)) || 
+                    (a.location && a.location.toLowerCase().includes(query)) ||
+                    (a.description && a.description.toLowerCase().includes(query))
+                );
+                
+                const adGov = a.governorate || a.location || '';
+                const adCity = a.city || a.location || '';
+                const matchesGov = !currentSelectedGov || adGov.includes(currentSelectedGov);
+                const matchesCity = !currentSelectedCity || adCity.includes(currentSelectedCity);
+
+                return matchesSub && matchesSearch && matchesGov && matchesCity;
+            });
+            
+            if (filtered.length > 0) {
+                container.innerHTML += `
+                    <section>
+                        <div class="flex justify-between items-center mb-3 md:mb-5 px-2">
+                            <h3 class="font-black text-sm md:text-xl text-white flex items-center gap-2.5 md:gap-3">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                <span>${sub}</span>
+                            </h3>
+                            <button onclick="openFullCategoryOverlay('${sub}')" class="text-zinc-400 text-xs md:text-sm font-bold hover:underline">عرض الكل</button>
+                        </div>
+                        <div class="flex md:grid overflow-x-auto md:overflow-visible no-scrollbar md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 px-2 pb-2 snap-x md:snap-none">${filtered.map(ad => createAdvancedCard(ad)).join('')}</div>
+                    </section>`;
+            }
+        });
+
+        if (container.innerHTML === "") {
+            container.innerHTML = `<div class="text-center py-12 text-zinc-500 text-xs md:text-base font-bold px-4">لا توجد مشاريع مطابقة لبحثك في هذا النطاق</div>`;
+        }
+    };
+
+    window.openFullCategoryOverlay = (sub) => {
+        const titleElem = document.getElementById('overlay-title');
+        const overlayElem = document.getElementById('category-overlay');
+        const listElem = document.getElementById('overlay-results-list');
+
+        if (titleElem) titleElem.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> ${sub}`;
+        if (overlayElem) {
+            overlayElem.classList.remove('translate-x-full');
+            overlayElem.classList.add('translate-x-0');
+        }
+        
+        const filtered = allAds.filter(a => {
+            const matchesSub = (sub === 'جميع المشاريع' || a.subType === sub);
+            const adGov = a.governorate || a.location || '';
+            const adCity = a.city || a.location || '';
+            const matchesGov = !currentSelectedGov || adGov.includes(currentSelectedGov);
+            const matchesCity = !currentSelectedCity || adCity.includes(currentSelectedCity);
+
+            return matchesSub && matchesGov && matchesCity;
+        });
+        
+        if (listElem) {
+            if (filtered.length === 0) {
+                listElem.innerHTML = `<div class="text-center py-12 text-zinc-500 text-xs font-bold md:col-span-2">لا توجد نتائج</div>`;
+            } else {
+                listElem.innerHTML = filtered.map(ad => {
+                    const pData = parsePremiumSpecs(ad);
+                    const fallbackImg = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=500&q=80';
+                    const images = ad.allImages || (ad.image ? [ad.image] : [fallbackImg]);
+
+                    return `
+                        <div onclick="location.href='premium_details.html?id=${ad.id}'" class="bg-zinc-900 border border-zinc-800 p-3.5 rounded-2xl flex gap-3.5 items-center cursor-pointer hover:border-zinc-700 transition shadow-lg">
+                            <img src="${images[0]}" class="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover shrink-0">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-xs md:text-sm font-bold text-white truncate mb-1">${ad.title || 'مشروع'}</h4>
+                                <p class="text-red-500 font-black text-xs md:text-sm mb-2">${pData.priceText}</p>
+                                <div class="grid grid-cols-2 gap-1.5 text-[10px] md:text-xs text-zinc-400 font-bold">
+                                    <span>المقدم: <strong class="text-zinc-200">${pData.downPayment}</strong></span>
+                                    <span>التقسيط: <strong class="text-white">${pData.installmentYears}</strong></span>
+                                    <span>الاستلام: <strong class="text-white">${pData.deliveryDate}</strong></span>
+                                    <span>المساحة: <strong class="text-white">${pData.area}</strong></span>
+                                </div>
+                            </div>
+                        </div>`;
+                }).join('');
+            }
+        }
+    };
+
+    window.closeOverlay = () => {
+        const overlayElem = document.getElementById('category-overlay');
+        if (overlayElem) {
+            overlayElem.classList.remove('translate-x-0');
+            overlayElem.classList.add('translate-x-full');
+        }
+    };
+})();
+</script>
+
+<style>
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 10px;
+}
+</style>

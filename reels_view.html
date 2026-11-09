@@ -1,0 +1,436 @@
+<style>
+    body { font-family:'Cairo',sans-serif; background:#000; overflow:hidden; margin:0; color:white; }
+    #main-display:has(#reels-container) { height:100dvh; min-height:0; padding:0 !important; margin:0 !important; overflow:hidden; }
+    #reels-container {
+        position:relative; width:100%; height:calc(100dvh - 75px); overflow-x:hidden; overflow-y:auto;
+        scroll-snap-type:y mandatory; scroll-behavior:smooth; overscroll-behavior-y:contain;
+        scrollbar-width:none; background:#000; -webkit-overflow-scrolling:touch;
+    }
+    #reels-container::-webkit-scrollbar { display:none; }
+    body.reels-toolbar-hidden #reels-container { height:100dvh; }
+    .video-container { position:relative; width:100%; height:calc(100dvh - 75px); overflow:hidden; background:#000; scroll-snap-align:start; scroll-snap-stop:always; flex-shrink:0; }
+    body.reels-toolbar-hidden .video-container { height:100dvh; }
+    .video-container video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; background:#000; }
+    .video-click-layer { position:absolute; inset:0; z-index:2; cursor:pointer; }
+    .bottom-shadow-gradient { position:absolute; bottom:0; left:0; width:100%; height:50vh; background:linear-gradient(to top,rgba(0,0,0,.85),rgba(0,0,0,.3) 50%,transparent); z-index:3; pointer-events:none; }
+    .overlay-elements { position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; justify-content:flex-end; padding:24px 16px; padding-bottom:max(24px,env(safe-area-inset-bottom)); box-sizing:border-box; pointer-events:none; }
+    .interactive-item { pointer-events:auto !important; }
+    .avatar-glow { border:2px solid #ef4444; box-shadow:0 0 10px rgba(239,68,68,.4); position:relative; }
+    .plus-btn { position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); width:20px; height:20px; background:#ef4444; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:bold; line-height:1; border:2px solid #000; transition:all .3s ease; z-index:20; cursor:pointer; }
+    .plus-btn:active { transform:translateX(-50%) scale(.8); }
+    .side-btn { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; transition:transform .2s ease; }
+    .side-btn:active { transform:scale(.9); }
+    .icon-circle { width:48px; height:48px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,.09); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.05); transition:all .2s; }
+    @keyframes rotateDisc { from {transform:rotate(0deg);} to {transform:rotate(360deg);} }
+    .music-disc { width:38px; height:38px; border-radius:50%; background:linear-gradient(45deg,#0f0f0f,#262626); border:4px solid rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; animation:rotateDisc 4s linear infinite; }
+    #comments-modal { transform:translateY(100%); transition:transform .4s cubic-bezier(.16,1,.3,1); z-index:99999; bottom:0; }
+    #comments-modal.open { transform:translateY(0); }
+    #reels-toast-container { position:fixed; top:max(20px,env(safe-area-inset-top)); left:50%; transform:translateX(-50%); z-index:999999; display:flex; flex-direction:column; gap:10px; pointer-events:none; width:90%; max-width:350px; }
+    .reels-toast { padding:12px 16px; border-radius:12px; background:rgba(20,20,20,.95); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.1); color:white; font-size:13px; font-weight:bold; text-align:center; opacity:0; transform:translateY(-20px); transition:all .4s cubic-bezier(.16,1,.3,1); pointer-events:auto; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+    .reels-toast.show { opacity:1; transform:translateY(0); }
+    .reel-loading { min-height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:14px; }
+    @media (prefers-reduced-motion:reduce) { #reels-container { scroll-behavior:auto; } }
+</style>
+
+<div id="reels-toast-container"></div>
+<div id="reels-container"><div class="reel-loading">جاري جلب فيديوهات الريلز... 🎬</div></div>
+
+<div id="comments-modal" class="fixed inset-x-0 h-[65vh] bg-[#0f0f0f] rounded-t-[30px] flex flex-col border-t border-white/10 shadow-2xl overflow-hidden">
+    <div class="flex justify-between items-center px-5 py-4 border-b border-white/5 bg-[#141414]">
+        <button onclick="closeComments()" class="text-gray-400 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <h4 id="modal-comments-count" class="text-xs font-black text-center flex-1 tracking-wide text-gray-300">0 تعليق</h4>
+        <div class="w-5"></div>
+    </div>
+    <div id="comments-list" class="flex-1 overflow-y-auto p-5 space-y-4 text-right bg-[#0f0f0f]"></div>
+    <div class="p-4 bg-[#161616] border-t border-white/10 w-full flex gap-3 items-center relative z-[100000]">
+        <button onclick="sendComment()" class="bg-red-600 hover:bg-red-700 text-white font-black px-5 py-3.5 rounded-2xl text-xs">إرسال</button>
+        <input type="text" id="comment-input" placeholder="أضف تعليقاً على هذا العقار..." class="flex-1 bg-white/5 border border-white/10 outline-none rounded-2xl p-3.5 text-xs text-right font-bold text-gray-100">
+    </div>
+</div>
+<div id="modal-backdrop" onclick="closeComments()" class="fixed inset-0 bg-black/80 z-[9999] hidden opacity-0 transition-opacity duration-300"></div>
+
+<script>
+(function () {
+    'use strict';
+    let commentsUnsubscribe = null;
+    let reelsSnapshotUnsubscribe = null;
+    let reelsScrollHandler = null;
+    let currentOpenReelId = null;
+    let isGlobalMuted = false;
+    let isFirstLoad = true;
+    let lastScrollTop = 0;
+    let scrollDirectionTimer = null;
+    let resizeHandler = null;
+    let currentContainer = null;
+    const SHARE_BASE_URL = 'https://www.aqaro-eg.workers.dev/';
+
+    function getDB() { return window.db || (typeof db !== 'undefined' ? db : null); }
+    function getAuthUser() { return window.auth && window.auth.currentUser ? window.auth.currentUser : null; }
+
+    function escapeHTML(value) {
+        return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function getSafeUsername(rawName) {
+        if (!rawName) return 'aqari_user';
+        if (String(rawName).includes('@')) return String(rawName).split('@')[0];
+        return String(rawName).replace(/\s+/g,'_').toLowerCase();
+    }
+    window.getSafeUsername = getSafeUsername;
+
+    window.showReelsToast = function(message,type='success') {
+        const container = document.getElementById('reels-toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = 'reels-toast';
+        toast.textContent = (type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : '⚠️ ') + message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(),400); },3000);
+    };
+
+    function findToolbarElements() {
+        const selectors = ['#dynamic-nav','#bottom-nav','#bottom-navigation','#bottom-navbar','#main-toolbar','#main-navbar','#app-toolbar','#app-navbar','#navbar','.bottom-nav','.bottom-navigation','.bottom-navbar','.app-bottom-nav','.main-toolbar','[data-bottom-nav]'];
+        const elements = [];
+        selectors.forEach(selector => document.querySelectorAll(selector).forEach(element => {
+            if (element && !element.closest('#reels-container') && !element.closest('#comments-modal') && !elements.includes(element)) elements.push(element);
+        }));
+        return elements;
+    }
+
+    function setToolbarHidden(hidden) {
+        document.body.classList.toggle('reels-toolbar-hidden',hidden);
+        const nav = document.getElementById('dynamic-nav');
+        if (nav) nav.classList.toggle('reels-nav-hidden',hidden);
+        findToolbarElements().forEach(element => {
+            if (element.id === 'dynamic-nav') return;
+            element.style.transition = 'transform .25s ease, opacity .25s ease';
+            element.style.transform = hidden ? 'translateY(110%)' : '';
+            element.style.opacity = hidden ? '0' : '';
+            element.style.pointerEvents = hidden ? 'none' : '';
+        });
+        requestAnimationFrame(() => {
+            const wrapper = document.getElementById('reels-container');
+            if (!wrapper) return;
+            wrapper.querySelectorAll('.video-container').forEach(slide => {
+                slide.style.height = hidden ? '100dvh' : 'calc(100dvh - 75px)';
+            });
+        });
+    }
+
+    function handleToolbarDirection(wrapper) {
+        const currentTop = wrapper.scrollTop;
+        const difference = currentTop - lastScrollTop;
+        if (Math.abs(difference) < 2) return;
+        if (difference > 0) setToolbarHidden(true);
+        else setToolbarHidden(false);
+        lastScrollTop = currentTop;
+        clearTimeout(scrollDirectionTimer);
+        scrollDirectionTimer = setTimeout(() => { lastScrollTop = wrapper.scrollTop; },150);
+    }
+
+    window.followUser = async function(event,brokerId,btnElement) {
+        if (event) event.stopPropagation();
+        const user = getAuthUser();
+        const database = getDB();
+        if (!user) return showReelsToast('يرجى تسجيل الدخول أولاً للمتابعة!','warning');
+        if (!database || !brokerId || user.uid === brokerId) return showReelsToast('لا يمكنك متابعة نفسك!','warning');
+        try {
+            await database.collection('users').doc(user.uid).collection('following').doc(brokerId).set({
+                timestamp:firebase.firestore.FieldValue.serverTimestamp()
+            });
+            if (btnElement) {
+                btnElement.style.transform='translateX(-50%) scale(0)';
+                btnElement.style.opacity='0';
+                setTimeout(() => btnElement.remove(),300);
+            }
+            showReelsToast('تمت متابعة الحساب بنجاح','success');
+        } catch(error) { console.error('Follow error:',error); showReelsToast('حدث خطأ أثناء المتابعة','error'); }
+    };
+
+    window.loadReelsData = function() {
+        const database = getDB();
+        if (!database) { showLoadingError('خطأ: لم يتم العثور على قاعدة البيانات'); return; }
+        if (reelsSnapshotUnsubscribe) { reelsSnapshotUnsubscribe(); reelsSnapshotUnsubscribe=null; }
+        reelsSnapshotUnsubscribe = database.collection('videos').onSnapshot(snapshot => {
+            const container = document.getElementById('reels-container');
+            if (!container) return;
+            if (snapshot.empty) { container.innerHTML='<div class="reel-loading">لا توجد فيديوهات حالياً.</div>'; return; }
+            const docs = [];
+            snapshot.forEach(doc => docs.push({id:doc.id,...doc.data()}));
+            docs.sort((a,b) => {
+                const timeA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0;
+                const timeB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0;
+                return timeB-timeA;
+            });
+            if (!isFirstLoad) { docs.forEach(reel => updateReelCounters(reel)); return; }
+
+            const requestedVideoId = (window.__sharedReelId || new URLSearchParams(window.location.search).get('video') || '').trim();
+            if (requestedVideoId) {
+                const requestedIndex = docs.findIndex(reel => reel.id === requestedVideoId);
+                if (requestedIndex !== -1) docs.unshift(docs.splice(requestedIndex,1)[0]);
+            }
+            const validReels = docs.filter(reel => reel.videoUrl);
+            if (!validReels.length) { container.innerHTML='<div class="reel-loading">لا توجد فيديوهات صالحة للعرض حالياً.</div>'; return; }
+            container.innerHTML='';
+            validReels.forEach((reel,index) => container.appendChild(createReelElement(reel,index)));
+            isFirstLoad=false;
+            requestAnimationFrame(() => {
+                window.setupScrollListener();
+                if (requestedVideoId) {
+                    const target=document.getElementById('container-'+requestedVideoId);
+                    if (target) {
+                        container.scrollTop = target.offsetTop;
+                        lastScrollTop = container.scrollTop;
+                    } else {
+                        showReelsToast('لم يتم العثور على الريل المطلوب أو أنه غير متاح.','warning');
+                    }
+                }
+                playCurrentReel();
+            });
+        },error => {
+            console.error('Firestore Error:',error);
+            showLoadingError('تعذر تحميل الريلز. تحقق من الاتصال وصلاحيات Firebase.');
+        });
+    };
+
+    function showLoadingError(message) {
+        const container=document.getElementById('reels-container');
+        if (container) container.innerHTML='<div class="reel-loading" style="color:#ef4444">'+escapeHTML(message)+'</div>';
+    }
+
+    function updateReelCounters(reel) {
+        const likesCount=reel.likes ? Object.keys(reel.likes).length : 0;
+        const commentsCount=reel.commentsCount || 0;
+        const user=getAuthUser();
+        const hasLiked=!!(user && reel.likes && reel.likes[user.uid]);
+        const likeCount=document.getElementById('like-count-'+reel.id);
+        const commentCount=document.getElementById('comment-count-'+reel.id);
+        const heart=document.getElementById('heart-svg-'+reel.id);
+        if (likeCount) likeCount.textContent=likesCount;
+        if (commentCount) commentCount.textContent=commentsCount;
+        if (heart) { heart.setAttribute('fill',hasLiked?'#ef4444':'none'); heart.setAttribute('stroke',hasLiked?'#ef4444':'currentColor'); }
+    }
+
+    function createReelElement(reel,index) {
+        const reelId=reel.id;
+        const user=getAuthUser();
+        const likesCount=reel.likes ? Object.keys(reel.likes).length : 0;
+        const hasLiked=!!(user && reel.likes && reel.likes[user.uid]);
+        const safeName=getSafeUsername(reel.userName);
+        const safeTitle=escapeHTML(reel.title || '');
+        const safeUserId=String(reel.userId || '');
+        const safeVideoUrl=String(reel.videoUrl || '');
+        const slide=document.createElement('div');
+        slide.className='video-container';
+        slide.id='container-'+reelId;
+        const video=document.createElement('video');
+        video.src=safeVideoUrl; video.loop=true; video.playsInline=true;
+        video.setAttribute('playsinline',''); video.setAttribute('webkit-playsinline','');
+        video.preload=index===0?'auto':'metadata'; video.muted=isGlobalMuted;
+        const clickLayer=document.createElement('div');
+        clickLayer.className='video-click-layer'; clickLayer.onclick=function(){window.togglePlayPause(this);};
+        slide.appendChild(video); slide.appendChild(clickLayer);
+        const gradient=document.createElement('div'); gradient.className='bottom-shadow-gradient'; slide.appendChild(gradient);
+        const overlay=document.createElement('div'); overlay.className='overlay-elements';
+        overlay.innerHTML=`
+            <div class="w-full flex flex-row items-end justify-between gap-4">
+                <div class="flex-1 text-right mb-4 pl-12">
+                    <h3 class="text-white font-black text-[15px] mb-1 tracking-wide">@${escapeHTML(safeName)}</h3>
+                    <p class="text-gray-200 text-xs leading-relaxed font-normal">${safeTitle}</p>
+                </div>
+                <div class="flex flex-col items-center gap-5 mb-4 select-none">
+                    <div class="relative mb-2 interactive-item">
+                        <div class="w-12 h-12 rounded-full avatar-glow cursor-pointer overflow-hidden border border-white/20 flex items-center justify-center bg-neutral-800 font-black text-lg" onclick="event.stopPropagation(); openBrokerProfile('${escapeHTML(safeUserId)}')">${escapeHTML(safeName.charAt(0).toUpperCase())}</div>
+                        <div class="plus-btn" onclick="followUser(event,'${escapeHTML(safeUserId)}',this)">+</div>
+                    </div>
+                    <div class="side-btn interactive-item" onclick="event.stopPropagation(); likeReel('${escapeHTML(reelId)}')">
+                        <div class="icon-circle"><svg id="heart-svg-${escapeHTML(reelId)}" class="w-5 h-5 transition-all duration-200" fill="${hasLiked?'#ef4444':'none'}" stroke="${hasLiked?'#ef4444':'currentColor'}" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></div>
+                        <span id="like-count-${escapeHTML(reelId)}" class="font-black text-xs text-gray-300">${likesCount}</span>
+                    </div>
+                    <div class="side-btn interactive-item" onclick="event.stopPropagation(); openComments('${escapeHTML(reelId)}')">
+                        <div class="icon-circle"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg></div>
+                        <span id="comment-count-${escapeHTML(reelId)}" class="font-black text-xs text-gray-300">${Number(reel.commentsCount||0)}</span>
+                    </div>
+                    <div class="side-btn interactive-item" data-title="${safeTitle}" onclick="event.stopPropagation(); shareReel('${escapeHTML(reelId)}',this.dataset.title)">
+                        <div class="icon-circle"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 10.742l4.632-2.316m0 0a3 3 0 10-4.632-2.316 3 3 0 004.632 2.316zm0 0l4.632 2.316m0 0a3 3 0 104.632-2.316 3 3 0 00-4.632 2.316zm0 0L8.684 13.258m0 0a3 3 0 104.632 2.316 3 3 0 00-4.632-2.316z"/></svg></div>
+                        <span class="font-black text-[10px] text-gray-400">مشاركة</span>
+                    </div>
+                    <div class="music-disc mt-1"><div class="w-2.5 h-2.5 bg-red-600 rounded-full"></div></div>
+                </div>
+            </div>`;
+        slide.appendChild(overlay);
+        return slide;
+    }
+
+    window.togglePlayPause=function(clickLayer) {
+        const video=clickLayer.parentElement.querySelector('video');
+        if (!video) return;
+        if (video.paused) video.play().catch(()=>{}); else video.pause();
+    };
+
+    function playCurrentReel() {
+        const wrapper=document.getElementById('reels-container');
+        if (!wrapper) return;
+        const slides=wrapper.querySelectorAll('.video-container');
+        if (!slides.length) return;
+        const wrapperRect=wrapper.getBoundingClientRect();
+        const center=wrapperRect.top+wrapperRect.height/2;
+        let closestSlide=null,closestDistance=Infinity;
+        slides.forEach(slide=>{
+            const rect=slide.getBoundingClientRect();
+            const slideCenter=rect.top+rect.height/2;
+            const distance=Math.abs(slideCenter-center);
+            if(distance<closestDistance){closestDistance=distance;closestSlide=slide;}
+        });
+        slides.forEach(slide=>{
+            const video=slide.querySelector('video');
+            if(!video)return;
+            if(slide===closestSlide){video.muted=isGlobalMuted;video.play().catch(()=>{});}
+            else video.pause();
+        });
+    }
+
+    window.setupScrollListener=function() {
+        const wrapper=document.getElementById('reels-container');
+        if(!wrapper)return;
+        if(currentContainer && reelsScrollHandler) currentContainer.removeEventListener('scroll',reelsScrollHandler);
+        currentContainer=wrapper;
+        lastScrollTop=wrapper.scrollTop;
+        let playTimer=null;
+        reelsScrollHandler=function(){
+            handleToolbarDirection(wrapper);
+            clearTimeout(playTimer);
+            playTimer=setTimeout(playCurrentReel,80);
+        };
+        wrapper.addEventListener('scroll',reelsScrollHandler,{passive:true});
+        playCurrentReel();
+    };
+
+    window.openBrokerProfile=function(brokerId) {
+        if(!brokerId || brokerId==='undefined' || brokerId==='null'){window.location.href='broker.html';return;}
+        window.location.href='broker.html?id='+encodeURIComponent(brokerId);
+    };
+
+    window.likeReel=async function(reelId) {
+        const user=getAuthUser(),database=getDB();
+        if(!user)return showReelsToast('يرجى تسجيل الدخول أولاً للإعجاب بالفيديو!','warning');
+        if(!database)return;
+        const reelRef=database.collection('videos').doc(reelId);
+        try {
+            const doc=await reelRef.get(); if(!doc.exists)return;
+            const likes={...(doc.data().likes||{})};
+            if(likes[user.uid])delete likes[user.uid];else likes[user.uid]=true;
+            await reelRef.update({likes:likes});
+        } catch(error){console.error('Like error:',error);showReelsToast('تعذر تسجيل الإعجاب','error');}
+    };
+
+    window.openComments=function(reelId) {
+        if(!reelId || reelId==='undefined')return;
+        const database=getDB();if(!database)return;
+        currentOpenReelId=reelId;
+        const modal=document.getElementById('comments-modal'),backdrop=document.getElementById('modal-backdrop');
+        if(!modal||!backdrop)return;
+        modal.classList.add('open');backdrop.classList.remove('hidden');
+        setTimeout(()=>backdrop.classList.add('opacity-100'),10);
+        if(commentsUnsubscribe){commentsUnsubscribe();commentsUnsubscribe=null;}
+        commentsUnsubscribe=database.collection('videos').doc(reelId).collection('comments').onSnapshot(snapshot=>{
+            const list=document.getElementById('comments-list'),count=document.getElementById('modal-comments-count');
+            if(!list||!count)return;
+            count.textContent=snapshot.size+' تعليق';list.innerHTML='';
+            if(snapshot.empty){list.innerHTML='<div class="text-center py-14 text-gray-600 text-xs font-bold">كن أول من يترك تعليقاً... ✨</div>';return;}
+            const commentDocs=[];snapshot.forEach(doc=>commentDocs.push({id:doc.id,...doc.data()}));
+            commentDocs.sort((a,b)=>{
+                const timeA=a.timestamp&&a.timestamp.toMillis?a.timestamp.toMillis():0;
+                const timeB=b.timestamp&&b.timestamp.toMillis?b.timestamp.toMillis():0;
+                return timeA-timeB;
+            });
+            commentDocs.forEach(comment=>{
+                const date=comment.timestamp&&comment.timestamp.toMillis?new Date(comment.timestamp.toMillis()).toLocaleDateString('ar-EG'):'الآن';
+                const name=getSafeUsername(comment.userName);
+                const item=document.createElement('div');item.className='flex gap-3 items-start';
+                item.innerHTML=`<div class="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center font-black text-xs text-white border border-white/5">${escapeHTML(name.charAt(0).toUpperCase())}</div>
+                    <div class="flex-1 bg-white/[0.04] border border-white/5 p-3 rounded-2xl">
+                    <div class="flex justify-between items-center mb-1"><span class="text-[10px] text-gray-500 font-bold">${escapeHTML(date)}</span><span class="text-xs font-black text-gray-300">@${escapeHTML(name)}</span></div>
+                    <p class="text-xs text-gray-200 leading-relaxed font-medium whitespace-pre-wrap break-words">${escapeHTML(comment.text||'')}</p></div>`;
+                list.appendChild(item);
+            });
+        },error=>{
+            console.error('Comments error:',error);
+            const list=document.getElementById('comments-list');
+            if(list)list.innerHTML='<div class="text-center text-red-500 text-xs">تعذر تحميل التعليقات.</div>';
+        });
+    };
+
+    window.closeComments=function() {
+        const modal=document.getElementById('comments-modal'),backdrop=document.getElementById('modal-backdrop');
+        if(modal)modal.classList.remove('open');
+        if(backdrop){backdrop.classList.remove('opacity-100');setTimeout(()=>backdrop.classList.add('hidden'),300);}
+        if(commentsUnsubscribe){commentsUnsubscribe();commentsUnsubscribe=null;}
+        currentOpenReelId=null;
+    };
+
+    window.sendComment=async function() {
+        const user=getAuthUser(),database=getDB(),input=document.getElementById('comment-input');
+        if(!input)return;
+        const commentText=input.value.trim();
+        if(!user||!commentText||!currentOpenReelId)return showReelsToast('سجل دخولك أولاً واكتب تعليقاً!','warning');
+        if(!database)return;
+        const reelId=currentOpenReelId,reelRef=database.collection('videos').doc(reelId);
+        input.value='';
+        const name=getSafeUsername(user.displayName||user.email||'مستخدم');
+        try {
+            await reelRef.collection('comments').add({userId:user.uid,userName:name,text:commentText,timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+            await database.runTransaction(async transaction=>{
+                const doc=await transaction.get(reelRef);if(!doc.exists)return;
+                transaction.update(reelRef,{commentsCount:(doc.data().commentsCount||0)+1});
+            });
+        } catch(error){console.error('Send comment error:',error);showReelsToast('تعذر إرسال التعليق','error');}
+    };
+
+    window.shareReel=async function(reelId,title) {
+        const shareUrl=SHARE_BASE_URL+'?video='+encodeURIComponent(reelId);
+        const shareData={title:title||'عقار مميز | Aqaro',text:'شاهد ريلز هذا العقار 🎬',url:shareUrl};
+        if(navigator.share) {
+            try { await navigator.share(shareData);return; }
+            catch(error){if(error&&error.name==='AbortError')return;console.error('Share error:',error);}
+        }
+        await window.copyShareLink(shareUrl);
+    };
+
+    window.copyShareLink=async function(url) {
+        try {
+            if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(url);showReelsToast('تم نسخ رابط المشاركة بنجاح! 📋');return;}
+            throw new Error('Clipboard unavailable');
+        } catch(error) {
+            const textarea=document.createElement('textarea');textarea.value=url;
+            textarea.style.position='fixed';textarea.style.left='-9999px';textarea.style.top='0';
+            document.body.appendChild(textarea);textarea.focus();textarea.select();textarea.setSelectionRange(0,textarea.value.length);
+            let copied=false;try{copied=document.execCommand('copy');}catch(copyError){console.error('Copy error:',copyError);}
+            textarea.remove();
+            if(copied)showReelsToast('تم نسخ رابط المشاركة بنجاح! 📋');
+            else showReelsToast('تعذر النسخ تلقائياً. الرابط: '+url,'error');
+        }
+    };
+
+    function initializeReelsPage() {
+        const container=document.getElementById('reels-container');if(!container)return;
+        document.body.classList.add('reels-page-active');
+        const nav=document.getElementById('dynamic-nav');if(nav)nav.classList.remove('reels-nav-hidden');
+        document.body.classList.remove('reels-toolbar-hidden');
+        if(getDB())window.loadReelsData();else showLoadingError('خطأ: لم يتم العثور على قاعدة البيانات');
+        if(resizeHandler)window.removeEventListener('resize',resizeHandler);
+        resizeHandler=()=>{
+            const wrapper=document.getElementById('reels-container');if(!wrapper)return;
+            const hidden=document.body.classList.contains('reels-toolbar-hidden');
+            wrapper.querySelectorAll('.video-container').forEach(slide=>slide.style.height=hidden?'100dvh':'calc(100dvh - 75px)');
+            playCurrentReel();
+        };
+        window.addEventListener('resize',resizeHandler);
+    }
+
+    // لأن صفحة الريلز تُحقن بعد DOMContentLoaded داخل main-display، ابدأ مباشرة.
+    initializeReelsPage();
+})();
+</script>

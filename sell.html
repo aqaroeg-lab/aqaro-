@@ -1,0 +1,1553 @@
+<div class="p-5 max-w-md mx-auto min-h-screen bg-[#0d0d0d] text-white pb-24 select-none relative">
+
+    <!-- Header -->
+    <div class="text-center pb-4 border-b border-zinc-800 mb-5 flex justify-between items-center">
+        <strong class="text-base font-black text-zinc-200 flex items-center gap-2">
+            <i class="fa-solid fa-bolt-lightning text-cyan-400 text-sm"></i>
+            نشر إعلان عقاري ذكي
+        </strong>
+
+        <span onclick="loadPage('home')"
+              class="text-zinc-500 cursor-pointer text-base hover:text-red-500 transition w-8 h-8 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+        </span>
+    </div>
+
+    <!-- Step 0 -->
+    <div id="step-type-selection" class="space-y-4">
+        <h2 class="text-xs font-bold mb-4 text-zinc-400">
+            اختر تصنيف المعاملة العقارية:
+        </h2>
+
+        <div onclick="selectFlowType('resale')"
+             class="p-5 bg-[#121218] border border-zinc-800 rounded-2xl cursor-pointer active:scale-[0.98] transition hover:border-red-500 group shadow-lg">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-red-500 text-lg">
+                    <i class="fa-solid fa-house-user"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-black text-white">عقارات ريسيل (Resale)</h3>
+                    <p class="text-[10px] text-zinc-400 mt-0.5">
+                        وحدات جاهزة، كاش أو تقسيط مباشر من المالك
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div onclick="selectFlowType('premium')"
+             class="p-5 bg-[#121218] border border-zinc-800 rounded-2xl cursor-pointer active:scale-[0.98] transition hover:border-cyan-500 group shadow-lg">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-cyan-400 text-lg">
+                    <i class="fa-solid fa-building-flag"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-black text-white">مشاريع بريميري (Premium)</h3>
+                    <p class="text-[10px] text-zinc-400 mt-0.5">
+                        منشآت قيد الإنشاء، كمبوندات، وأنظمة سداد مطورة
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="step1" class="hidden">
+
+        <p onclick="backToTypeSelection()"
+           class="text-zinc-400 text-[11px] font-bold cursor-pointer mb-4 flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-right"></i>
+            العودة لتغيير نوع التصنيف
+        </p>
+
+        <h2 class="text-xs font-bold mb-3 text-zinc-400">
+            اختر القسم الرئيسي:
+        </h2>
+
+        <div class="grid grid-cols-2 gap-3" id="main-categories-grid">
+            <div class="col-span-2 text-center text-zinc-500 text-xs py-6">
+                جاري قراءة الأقسام من قاعدة البيانات...
+            </div>
+        </div>
+
+        <h2 id="sub-title-label"
+            class="text-xs font-bold mt-5 mb-2 text-zinc-400 hidden">
+            اختر النوع الفرعي:
+        </h2>
+
+        <div id="sub-container" class="flex flex-wrap gap-2"></div>
+
+        <button id="main-next"
+                class="w-full mt-8 py-3.5 rounded-xl bg-zinc-800 text-zinc-600 font-bold text-xs cursor-not-allowed"
+                onclick="goToStep(2)"
+                disabled>
+            متابعة وتعبئة المواصفات
+        </button>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="step2" class="hidden space-y-3">
+
+        <p onclick="goToStep(1)"
+           class="text-red-400 text-[11px] font-bold cursor-pointer mb-2">
+            <i class="fa-solid fa-arrow-right"></i>
+            العودة لتغيير النوع
+        </p>
+
+        <div id="selected-property-type"
+             class="p-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 text-cyan-300 text-xs font-bold">
+        </div>
+
+        <!-- Images -->
+        <label id="photo-limit-label"
+               class="block text-[11px] text-zinc-400 mb-1 font-bold">
+            معرض الصور:
+        </label>
+
+        <div class="flex gap-2 overflow-x-auto mb-3 pb-2" id="gallery">
+            <div id="photo-add-btn"
+                 class="min-w-[80px] h-20 bg-[#121218] border-2 border-dashed border-zinc-800 rounded-2xl flex items-center justify-center text-xl cursor-pointer text-zinc-500"
+                 onclick="document.getElementById('fileIn').click()">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+        </div>
+
+        <input type="file" id="fileIn" multiple accept="image/*"
+               class="hidden" onchange="uploadImages(this.files)">
+
+        <!-- Masterplan -->
+        <div id="master-plan-box"
+             class="hidden mb-3 bg-[#121218] p-4 rounded-2xl border border-zinc-800">
+
+            <label class="block text-[11px] text-zinc-300 font-bold mb-2">
+                <i class="fa-solid fa-map-location-dot text-cyan-400"></i>
+                صورة الكتالوج / الماستر بلان:
+            </label>
+
+            <input type="file" id="planIn" accept="image/*"
+                   class="text-xs text-zinc-400"
+                   onchange="uploadMasterPlanImage(this.files[0])">
+
+            <div id="plan-status" class="text-[10px] text-zinc-400 mt-2"></div>
+        </div>
+
+        <!-- Title -->
+        <input type="text" id="g-title"
+               placeholder="عنوان الإعلان"
+               class="w-full bg-[#121218] border border-zinc-800 text-white p-3.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none">
+
+        <!-- Price -->
+        <div id="price-container" class="grid grid-cols-2 gap-3"></div>
+
+        <!-- Core property specifications -->
+        <div id="core-specifications" class="grid grid-cols-2 gap-3"></div>
+
+        <!-- Area: field retained for compatibility with the existing form -->
+        <div id="area-container" class="hidden">
+            <input type="number" id="g-area"
+                   placeholder="المساحة الإجمالية بالمتر المربع"
+                   min="0" step="any"
+                   class="w-full bg-[#121218] border border-zinc-800 text-white p-3.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none">
+        </div>
+
+        <input type="number" id="g-phone"
+               placeholder="رقم الموبايل للواتساب (01xxxxxxxxx)"
+               class="w-full bg-[#121218] border border-zinc-800 text-white p-3.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none">
+
+        <!-- Location -->
+        <div class="p-4 bg-[#121218] border border-zinc-800 rounded-xl space-y-2 cursor-pointer"
+             onclick="openLocationModal()">
+
+            <div class="flex justify-between items-center">
+                <span class="text-[11px] font-bold text-cyan-400">
+                    <i class="fa-solid fa-map-pin"></i>
+                    الموقع الجغرافي للعقار:
+                </span>
+
+                <span class="text-[10px] bg-cyan-500/10 text-cyan-400 px-2.5 py-1 rounded-lg">
+                    تغيير / اختيار
+                </span>
+            </div>
+
+            <div id="selected-location-display"
+                 class="text-xs text-zinc-300 font-semibold py-1">
+                لم يتم تحديد المحافظة والمدينة بعد...
+            </div>
+
+            <input type="text" id="g-street"
+                   placeholder="اسم الشارع أو المعالم المميزة (اختياري)"
+                   onclick="event.stopPropagation()"
+                   class="w-full bg-[#0d0d0d] border border-zinc-800 text-white p-2.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none">
+        </div>
+
+        <!-- Admin-defined additional fields -->
+        <div id="dynamic-fields-container" class="space-y-3"></div>
+
+        <!-- Description -->
+        <textarea id="g-desc" rows="4"
+                  placeholder="اكتب وصفاً تفصيلياً للعقار ونظام السداد وحالة المعاينة..."
+                  class="w-full bg-[#121218] border border-zinc-800 text-white p-3.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none resize-none"></textarea>
+
+        <button id="final-btn"
+                class="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-black text-xs shadow-lg"
+                onclick="saveAdToFirebase()">
+            <i class="fa-solid fa-paper-plane"></i>
+            نشر الإعلان الآن فوراً
+        </button>
+    </div>
+
+    <!-- Location modal -->
+    <div id="location-modal"
+         class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex flex-col justify-end p-2 sm:items-center sm:justify-center">
+
+        <div class="bg-[#121218] border border-zinc-800 rounded-t-3xl sm:rounded-2xl p-5 max-w-lg w-full max-h-[85vh] flex flex-col">
+
+            <div class="flex justify-between items-center pb-3 border-b border-zinc-800 mb-4">
+                <h3 class="text-xs font-black text-white">
+                    <i class="fa-solid fa-map-location-dot text-cyan-400"></i>
+                    اختر المحافظة والمنطقة
+                </h3>
+
+                <span onclick="closeLocationModal()"
+                      class="text-zinc-400 cursor-pointer w-7 h-7 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </span>
+            </div>
+
+            <div id="modal-gov-view" class="space-y-3 overflow-y-auto flex-1">
+                <p class="text-[11px] text-zinc-400 font-bold">اختر المحافظة:</p>
+                <div class="grid grid-cols-2 gap-2" id="modal-gov-grid"></div>
+            </div>
+
+            <div id="modal-city-view" class="space-y-3 overflow-y-auto flex-1 hidden">
+                <button onclick="backToGovView()"
+                        class="text-cyan-400 text-[11px] font-bold mb-2">
+                    <i class="fa-solid fa-arrow-right"></i>
+                    تغيير المحافظة (<span id="chosen-gov-name"></span>)
+                </button>
+
+                <p class="text-[11px] text-zinc-400 font-bold">
+                    اختر المدينة أو المنطقة:
+                </p>
+
+                <div class="grid grid-cols-2 gap-2" id="modal-city-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message modal -->
+    <div id="custom-modal"
+         class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+
+        <div class="bg-[#121218] border border-zinc-800 rounded-2xl p-5 max-w-sm w-full text-center space-y-4">
+
+            <div id="modal-icon"
+                 class="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+
+            <div>
+                <h3 id="modal-title" class="text-xs font-black text-white mb-1">
+                    تنبيه نظام عقارو
+                </h3>
+
+                <p id="modal-message"
+                   class="text-[11px] text-zinc-300 leading-relaxed"></p>
+            </div>
+
+            <button onclick="closeCustomModal()"
+                    class="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-bold text-xs">
+                حسناً، فهمت
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    const S3_BASE_ENDPOINT =
+        'https://lviwhlekdekvyevknopr.supabase.co/storage/v1/object/aqaro-media/ads/';
+
+    const SUPABASE_ANON_KEY =
+        'sb_publishable_l5yoWx8KXsLobZqrW33Fqg_Lq9jz8EC';
+
+    const PUBLIC_VIEW_BASE =
+        'https://lviwhlekdekvyevknopr.supabase.co/storage/v1/object/public/aqaro-media/ads/';
+
+    const egyptGovernoratesData = {
+        "القاهرة": ["التجمع الخامس", "التجمع الأول", "مدينة نصر", "مصر الجديدة", "المعادي", "المنيل", "الزمالك", "المهندسين", "المقطم", "الشروق", "بدر", "مدينتي", "الرحاب", "العباسية", "عين شمس"],
+        "الجيزة": ["الشيخ زايد", "6 اكتوبر", "حدائق الأهرام", "الدقي", "العجوزة", "الهرم", "فيصل", "المهندسين", "أبو رواش", "حدائق اكتوبر", "البدرشين"],
+        "الإسكندرية": ["سموحة", "ميامي", "العامرية", "المنتزه", "لوران", "سيدي بشر", "أبو قير", "الساحل الشمالي", "المندرة", "بحري"],
+        "البحر الأحمر": ["الغردقة", "الجونة", "سفاجا", "مرسى علم", "رأس غارب"],
+        "مطروح": ["مرسى مطروح", "العلمين الجديدة", "سيدي عبد الرحمن", "الضبعة", "الحمام"],
+        "الدقهلية": ["المنصورة", "سنبلاوين", "ميت غمر", "طلخا", "بلقاس", "دكرنس"],
+        "الشرقية": ["العاشر من رمضان", "بلبيس", "الزقازيق", "منيا القمح", "فاقوس"],
+        "القليوبية": ["بنها", "شبرا الخيمة", "القناطر الخيرية", "العبور", "قليوب", "طوخ"],
+        "البحيرة": ["دمنهور", "كفر الدوار", "إيتاي البارود", "رشيد", "أبو حمص"],
+        "الغربية": ["طنطا", "المحلة الكبرى", "زفتى", "كفر الزيات", "سمنود"],
+        "المنوفية": ["شبين الكوم", "منوف", "السادات", "قويسنا", "بركة السبع"],
+        "كفر الشيخ": ["كفر الشيخ", "دسوق", "بلطيم", "فوة", "مطوبس"],
+        "الفيوم": ["الفيوم الجديدة", "سنورس", "إطسا", "طامية"],
+        "بني سويف": ["بني سويف الجديدة", "ببا", "إهناسيا", "ناصر"],
+        "أسيوط": ["أسيوط الجديدة", "منفلوط", "أبو تيج", "ديروط"],
+        "سوهاج": ["سوهاج الجديدة", "جهينة", "جرجا"],
+        "قنا": ["قنا الجديدة", "نجع حمادي", "دشنا", "قوص"],
+        "الأقصر": ["مدينة الأقصر", "إسنا", "أرمنت"],
+        "أسوان": ["مدينة أسوان", "كوم أمبو", "إدفو", "أسوان الجديدة"],
+        "الإسماعيلية": ["الإسماعيلية الجديدة", "فايد", "التل الكبير"],
+        "بورسعيد": ["بورسعيد", "بورفؤاد"],
+        "السويس": ["مدينة السويس", "حي الأربعين", "حي عتاقة"],
+        "دمياط": ["دمياط الجديدة", "رأس البر", "فارسكور", "كفر سعد"],
+        "جنوب سيناء": ["شرم الشيخ", "دهب", "نويبع", "طور سيناء"]
+    };
+
+    let globalConfig = {};
+    let selectedFlow = '';
+    let selectedMain = '';
+    let selectedSubObj = null;
+    let selectedSubKey = '';
+
+    let uploadedImgs = [];
+    let uploadedPlanImgUrl = '';
+
+    let selectedGov = '';
+    let selectedCity = '';
+    let categoryListener = null;
+
+    const $ = id => document.getElementById(id);
+
+    function normalizeText(value) {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ى/g, 'ي')
+            .replace(/ة/g, 'ه')
+            .replace(/[ـ]/g, '')
+            .replace(/\s+/g, ' ');
+    }
+
+    function safeText(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[char]);
+    }
+
+    function getMainName() {
+        const item = globalConfig[selectedMain];
+        return item ? String(item.name || selectedMain) : selectedMain;
+    }
+
+    function getSubName() {
+        return selectedSubObj
+            ? String(selectedSubObj.name || selectedSubKey)
+            : '';
+    }
+
+    /*
+     * تحديد النوع بالاعتماد على القسم الرئيسي أولاً.
+     *
+     * مهم:
+     * "أرضي" داخل سكني = نوع سكني.
+     * "أراضي" كقسم رئيسي = أرض.
+     */
+    function getSpecificationType() {
+        const main = normalizeText(getMainName());
+        const sub = normalizeText(getSubName());
+
+        if (
+            main.includes('ارض') ||
+            main.includes('اراضي')
+        ) {
+            return 'land';
+        }
+
+        if (
+            main.includes('مول') ||
+            main.includes('تجار') ||
+            main.includes('مركز تجاري')
+        ) {
+            return 'mall';
+        }
+
+        if (
+            main.includes('فيل') ||
+            main.includes('فلل')
+        ) {
+            return 'villa';
+        }
+
+        if (
+            main.includes('سكن') ||
+            main.includes('شقق') ||
+            main.includes('شقه') ||
+            main.includes('عقارات سكنيه')
+        ) {
+            return 'residential';
+        }
+
+        /*
+         * أسماء فرعية احتياطية فقط إذا كان القسم الرئيسي
+         * غير واضح. لا يتم اعتبار "أرضي" أرضاً.
+         */
+        const residentialSubs = [
+            'شقه',
+            'شقق',
+            'متكرر',
+            'ارضي',
+            'بنت هاوس',
+            'دوبلكس',
+            'روف',
+            'روف السطح',
+            'استوديو',
+            'شقه فندقيه',
+            'شقق فندقيه'
+        ];
+
+        if (residentialSubs.includes(sub)) {
+            return 'residential';
+        }
+
+        return 'other';
+    }
+
+    window.showModal = function (title, message, isError = false) {
+        $('modal-title').innerText = title;
+        $('modal-message').innerText = message;
+
+        const iconDiv = $('modal-icon');
+
+        if (isError) {
+            iconDiv.className =
+                'w-12 h-12 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center mx-auto text-xl';
+
+            iconDiv.innerHTML =
+                '<i class="fa-solid fa-triangle-exclamation"></i>';
+        } else {
+            iconDiv.className =
+                'w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto text-xl';
+
+            iconDiv.innerHTML =
+                '<i class="fa-solid fa-circle-info"></i>';
+        }
+
+        $('custom-modal').classList.remove('hidden');
+    };
+
+    window.closeCustomModal = function () {
+        $('custom-modal').classList.add('hidden');
+    };
+
+    window.openLocationModal = function () {
+        const grid = $('modal-gov-grid');
+        grid.innerHTML = '';
+
+        Object.keys(egyptGovernoratesData).forEach(gov => {
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.className =
+                'p-3 bg-[#0d0d0d] border border-zinc-800 rounded-xl text-xs font-bold text-white hover:border-cyan-500 flex items-center justify-between';
+
+            button.innerHTML =
+                `<span>${safeText(gov)}</span>
+                 <i class="fa-solid fa-chevron-left text-[10px] text-zinc-500"></i>`;
+
+            button.onclick = function () {
+                selectedGov = gov;
+
+                $('chosen-gov-name').innerText = gov;
+
+                buildCitiesModalGrid(gov);
+
+                $('modal-gov-view').classList.add('hidden');
+                $('modal-city-view').classList.remove('hidden');
+            };
+
+            grid.appendChild(button);
+        });
+
+        $('modal-gov-view').classList.remove('hidden');
+        $('modal-city-view').classList.add('hidden');
+        $('location-modal').classList.remove('hidden');
+    };
+
+    window.closeLocationModal = function () {
+        $('location-modal').classList.add('hidden');
+    };
+
+    window.backToGovView = function () {
+        $('modal-city-view').classList.add('hidden');
+        $('modal-gov-view').classList.remove('hidden');
+    };
+
+    function buildCitiesModalGrid(govName) {
+        const grid = $('modal-city-grid');
+        grid.innerHTML = '';
+
+        (egyptGovernoratesData[govName] || []).forEach(city => {
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.className =
+                'p-3 bg-[#0d0d0d] border border-zinc-800 rounded-xl text-xs font-bold text-zinc-300 hover:border-cyan-500 hover:text-white';
+
+            button.innerText = city;
+
+            button.onclick = function () {
+                selectedCity = city;
+
+                $('selected-location-display').innerHTML =
+                    `<span class="text-white font-black">${safeText(selectedGov)}</span>
+                     -
+                     <span class="text-cyan-400 font-black">${safeText(selectedCity)}</span>`;
+
+                window.closeLocationModal();
+            };
+
+            grid.appendChild(button);
+        });
+    }
+
+    window.selectFlowType = function (type) {
+        selectedFlow = type;
+
+        $('step-type-selection').classList.add('hidden');
+        $('step1').classList.remove('hidden');
+
+        window.fetchStructure();
+    };
+
+    window.backToTypeSelection = function () {
+        $('step1').classList.add('hidden');
+        $('step-type-selection').classList.remove('hidden');
+
+        selectedFlow = '';
+        selectedMain = '';
+        selectedSubObj = null;
+        selectedSubKey = '';
+    };
+
+    window.fetchStructure = function () {
+        if (typeof db === 'undefined' || !db) {
+            showModal(
+                'خطأ في الاتصال',
+                'قاعدة بيانات Firestore غير جاهزة. تأكد من تحميل وتهيئة Firebase قبل تشغيل صفحة رفع الإعلان.',
+                true
+            );
+            return;
+        }
+
+        if (categoryListener) {
+            categoryListener();
+            categoryListener = null;
+        }
+
+        const docName =
+            selectedFlow === 'premium'
+                ? 'premium_categories'
+                : 'categories';
+
+        const grid = $('main-categories-grid');
+
+        grid.innerHTML = `
+            <div class="col-span-2 text-center text-zinc-500 text-xs py-6">
+                جاري تحميل الأقسام...
+            </div>
+        `;
+
+        categoryListener = db.collection('settings')
+            .doc(docName)
+            .onSnapshot(
+                doc => {
+                    if (!doc.exists) {
+                        globalConfig = {};
+
+                        grid.innerHTML = `
+                            <div class="col-span-2 text-center text-zinc-500 text-xs py-4">
+                                لا توجد أقسام معرفة في لوحة الأدمن لهذا المسار.
+                            </div>
+                        `;
+
+                        return;
+                    }
+
+                    globalConfig = doc.data() || {};
+                    delete globalConfig.secret_key;
+
+                    grid.innerHTML = '';
+
+                    Object.entries(globalConfig).forEach(([key, item]) => {
+                        if (!item || typeof item !== 'object') return;
+
+                        const button = document.createElement('button');
+
+                        button.type = 'button';
+                        button.id = 'm-btn-' + key;
+
+                        button.className =
+                            'bg-[#121218] p-4 rounded-2xl text-center border border-zinc-800 cursor-pointer hover:border-zinc-700 shadow-md';
+
+                        const icon = document.createElement('div');
+
+                        icon.className =
+                            'w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 text-cyan-400 flex items-center justify-center mx-auto mb-2 text-sm';
+
+                        const iconElement = document.createElement('i');
+                        iconElement.className =
+                            item.iconClass || 'fa-solid fa-layer-group';
+
+                        icon.appendChild(iconElement);
+
+                        const label = document.createElement('span');
+                        label.className =
+                            'text-[11px] font-bold text-white block';
+                        label.textContent = item.name || key;
+
+                        button.appendChild(icon);
+                        button.appendChild(label);
+
+                        button.onclick = function () {
+                            window.selectMainCategory(key);
+                        };
+
+                        grid.appendChild(button);
+                    });
+
+                    if (!grid.children.length) {
+                        grid.innerHTML = `
+                            <div class="col-span-2 text-center text-zinc-500 text-xs py-4">
+                                لا توجد أقسام صالحة للعرض.
+                            </div>
+                        `;
+                    }
+                },
+                error => {
+                    console.error('Firestore categories error:', error);
+
+                    grid.innerHTML = `
+                        <div class="col-span-2 text-center text-red-400 text-xs py-4">
+                            تعذر تحميل الأقسام. تحقق من صلاحيات Firestore.
+                        </div>
+                    `;
+                }
+            );
+    };
+
+    window.selectMainCategory = function (key) {
+        if (!globalConfig[key]) return;
+
+        selectedMain = key;
+        selectedSubObj = null;
+        selectedSubKey = '';
+
+        uploadedImgs = [];
+        uploadedPlanImgUrl = '';
+
+        $('gallery').innerHTML = `
+            <div id="photo-add-btn"
+                 class="min-w-[80px] h-20 bg-[#121218] border-2 border-dashed border-zinc-800 rounded-2xl flex items-center justify-center text-xl cursor-pointer text-zinc-500"
+                 onclick="document.getElementById('fileIn').click()">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+        `;
+
+        document.querySelectorAll('#main-categories-grid > button')
+            .forEach(button => {
+                button.className =
+                    'bg-[#121218] p-4 rounded-2xl text-center border border-zinc-800 cursor-pointer hover:border-zinc-700 shadow-md';
+            });
+
+        const selectedButton = $('m-btn-' + key);
+
+        if (selectedButton) {
+            selectedButton.className =
+                'bg-red-950/30 p-4 rounded-2xl text-center border border-red-500 shadow-lg';
+        }
+
+        $('sub-title-label').classList.remove('hidden');
+
+        const subBox = $('sub-container');
+        subBox.innerHTML = '';
+
+        const nextBtn = $('main-next');
+
+        nextBtn.disabled = true;
+        nextBtn.className =
+            'w-full mt-8 py-3.5 rounded-xl bg-zinc-800 text-zinc-600 font-bold text-xs cursor-not-allowed';
+
+        const subs = globalConfig[key].subDetails || {};
+
+        Object.entries(subs).forEach(([subKey, sub]) => {
+            if (!sub || typeof sub !== 'object') return;
+
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.className =
+                'bg-[#121218] text-zinc-300 border border-zinc-800 px-4 py-2 rounded-full text-xs font-bold cursor-pointer';
+
+            button.textContent = sub.name || subKey;
+
+            button.onclick = function () {
+                subBox.querySelectorAll('button').forEach(other => {
+                    other.className =
+                        'bg-[#121218] text-zinc-300 border border-zinc-800 px-4 py-2 rounded-full text-xs font-bold cursor-pointer';
+                });
+
+                button.className =
+                    'bg-red-600 text-white border-red-500 px-4 py-2 rounded-full text-xs font-bold shadow-md';
+
+                selectedSubKey = subKey;
+                selectedSubObj = { ...sub };
+
+                nextBtn.disabled = false;
+                nextBtn.className =
+                    'w-full mt-8 py-3.5 rounded-xl bg-red-600 text-white font-bold text-xs shadow-lg cursor-pointer';
+            };
+
+            subBox.appendChild(button);
+        });
+
+        if (!subBox.children.length) {
+            subBox.innerHTML = `
+                <p class="text-xs text-zinc-500">
+                    لا توجد أنواع فرعية لهذا القسم. أضف الأنواع من لوحة الأدمن.
+                </p>
+            `;
+        }
+    };
+
+    window.goToStep = function (step) {
+        if (step === 2) {
+            if (!selectedMain || !selectedSubObj) {
+                showModal(
+                    'اختيار ناقص',
+                    'اختر القسم الرئيسي والنوع الفرعي أولاً.',
+                    true
+                );
+                return;
+            }
+
+            $('step1').classList.add('hidden');
+            $('step2').classList.remove('hidden');
+
+            window.buildDynamicFields();
+        } else {
+            $('step2').classList.add('hidden');
+            $('step1').classList.remove('hidden');
+        }
+    };
+
+    function createInput(id, label, placeholder, type = 'text', required = true) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mb-2 min-w-0';
+
+        const fieldLabel = document.createElement('label');
+        fieldLabel.className =
+            'block text-[10px] text-zinc-400 font-bold mb-1';
+        fieldLabel.textContent = label;
+
+        const input = document.createElement('input');
+        input.id = id;
+        input.type = type;
+        input.placeholder = placeholder;
+        input.required = required;
+
+        if (type === 'number') {
+            input.min = '0';
+            input.step = 'any';
+            input.inputMode = 'decimal';
+        }
+
+        input.className =
+            'w-full min-w-0 bg-[#121218] border border-zinc-800 text-white p-3.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none';
+
+        wrapper.appendChild(fieldLabel);
+        wrapper.appendChild(input);
+
+        return wrapper;
+    }
+
+    function createSelect(id, label, options) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mb-2 min-w-0';
+
+        const fieldLabel = document.createElement('label');
+        fieldLabel.className =
+            'block text-[10px] text-zinc-400 font-bold mb-1';
+        fieldLabel.textContent = label;
+
+        const select = document.createElement('select');
+        select.id = id;
+        select.className =
+            'w-full min-w-0 bg-[#121218] border border-zinc-800 text-white p-3.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'اختر ' + label;
+        select.appendChild(placeholder);
+
+        options.forEach(option => {
+            const item = document.createElement('option');
+            item.value = option;
+            item.textContent = option;
+            select.appendChild(item);
+        });
+
+        wrapper.appendChild(fieldLabel);
+        wrapper.appendChild(select);
+
+        return wrapper;
+    }
+
+    /*
+     * بناء الحقول الأساسية حسب القسم الرئيسي.
+     * لا نستخدم اسم "أرضي" لتحديد الأرض؛ القسم الرئيسي هو الأساس.
+     */
+    window.buildDynamicFields = function () {
+        const type = getSpecificationType();
+
+        const core = $('core-specifications');
+        const container = $('dynamic-fields-container');
+        const priceContainer = $('price-container');
+
+        core.innerHTML = '';
+        container.innerHTML = '';
+        priceContainer.innerHTML = '';
+
+        $('selected-property-type').textContent =
+            'القسم: ' + getMainName() + ' — النوع: ' + getSubName();
+
+        $('photo-limit-label').textContent =
+            'معرض الصور (الحد الأقصى ' +
+            Math.max(1, Number(selectedSubObj.max_images) || 5) +
+            ' صور):';
+
+        if (selectedSubObj.allow_pdf || selectedFlow === 'premium') {
+            $('master-plan-box').classList.remove('hidden');
+        } else {
+            $('master-plan-box').classList.add('hidden');
+        }
+
+        // السعر العام حسب مسار النشر
+        if (selectedFlow === 'resale') {
+            priceContainer.appendChild(
+                createInput(
+                    'g-price',
+                    'السعر الإجمالي بالجنيه المصري',
+                    'أدخل السعر الإجمالي',
+                    'number'
+                )
+            );
+        } else {
+            priceContainer.appendChild(
+                createInput(
+                    'g-min-price',
+                    'أقل سعر للمتر',
+                    'أقل سعر للمتر بالجنيه',
+                    'number'
+                )
+            );
+
+            priceContainer.appendChild(
+                createInput(
+                    'g-max-price',
+                    'أعلى سعر للمتر',
+                    'أعلى سعر للمتر بالجنيه',
+                    'number'
+                )
+            );
+        }
+
+        // المساحة مطلوبة لجميع الأنواع المحددة
+        core.appendChild(
+            createInput(
+                'g-area',
+                'المساحة الإجمالية (م²)',
+                'أدخل المساحة بالمتر المربع',
+                'number'
+            )
+        );
+
+        // الشقق والفلل وكل الأنواع الفرعية السكنية
+        if (type === 'residential' || type === 'villa') {
+            core.appendChild(
+                createInput(
+                    'g-rooms',
+                    'عدد الغرف',
+                    'أدخل عدد الغرف',
+                    'number'
+                )
+            );
+
+            core.appendChild(
+                createInput(
+                    'g-baths',
+                    'عدد الحمامات',
+                    'أدخل عدد الحمامات',
+                    'number'
+                )
+            );
+        }
+
+        // الأراضي: سعر المتر ونسبة البناء
+        if (type === 'land') {
+            core.appendChild(
+                createInput(
+                    'g-meter-price',
+                    'سعر المتر (ج.م)',
+                    'أدخل سعر المتر',
+                    'number'
+                )
+            );
+
+            core.appendChild(
+                createInput(
+                    'g-building-ratio',
+                    'نسبة البناء (%)',
+                    'مثال: 60',
+                    'number'
+                )
+            );
+        }
+
+        // المولات: التشطيب
+        if (type === 'mall') {
+            core.appendChild(
+                createSelect(
+                    'g-finishing',
+                    'التشطيب',
+                    [
+                        'بدون تشطيب',
+                        'نصف تشطيب',
+                        'تشطيب كامل',
+                        'تشطيب سوبر لوكس',
+                        'تشطيب تجاري',
+                        'على المحارة'
+                    ]
+                )
+            );
+        }
+
+        // الحقول الإضافية التي يحددها الأدمن
+        const fields = Array.isArray(selectedSubObj.fields)
+            ? selectedSubObj.fields
+            : [];
+
+        fields.forEach((fieldConfig, index) => {
+            let label = '';
+            let fieldType = 'text';
+            let options = [];
+            let placeholder = '';
+
+            if (typeof fieldConfig === 'string') {
+                label = fieldConfig;
+            } else if (fieldConfig && typeof fieldConfig === 'object') {
+                label = fieldConfig.label || fieldConfig.name || '';
+                fieldType = fieldConfig.type || 'text';
+                options = Array.isArray(fieldConfig.options)
+                    ? fieldConfig.options
+                    : [];
+                placeholder = fieldConfig.placeholder || '';
+            }
+
+            label = String(label || '').trim();
+
+            if (!label) return;
+
+            /*
+             * منع تكرار الحقول التي أصبحت حقولاً أساسية.
+             * المقارنة تشمل الاسم، وليس المفتاح البرمجي.
+             */
+            const normalizedLabel = normalizeText(label);
+
+            const coreAliases = [
+                'المساحه',
+                'المساحه الاجماليه',
+                'مساحه العقار',
+                'عدد الغرف',
+                'الغرف',
+                'عدد الحمامات',
+                'الحمامات',
+                'سعر المتر',
+                'سعر المتر ج م',
+                'نسبه البناء',
+                'التشطيب'
+            ];
+
+            if (coreAliases.includes(normalizedLabel)) {
+                return;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mb-2';
+
+            const fieldLabel = document.createElement('label');
+            fieldLabel.className =
+                'block text-[10px] text-zinc-400 font-bold mb-1';
+            fieldLabel.textContent = label + ':';
+
+            let input;
+
+            if (fieldType === 'select' && options.length) {
+                input = document.createElement('select');
+
+                input.className =
+                    'dynamic-input w-full bg-[#121218] border border-zinc-800 text-white p-3.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none';
+
+                input.dataset.fieldLabel = label;
+
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = 'اختر ' + label;
+                input.appendChild(emptyOption);
+
+                options.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = String(option);
+                    optionElement.textContent = String(option);
+                    input.appendChild(optionElement);
+                });
+            } else {
+                input = document.createElement('input');
+
+                const allowedTypes = [
+                    'text',
+                    'number',
+                    'date',
+                    'email',
+                    'url'
+                ];
+
+                input.type = allowedTypes.includes(fieldType)
+                    ? fieldType
+                    : 'text';
+
+                input.placeholder = placeholder || 'أدخل ' + label;
+
+                input.className =
+                    'dynamic-input w-full bg-[#121218] border border-zinc-800 text-white p-3.5 rounded-xl text-xs focus:border-cyan-500 focus:outline-none';
+
+                input.dataset.fieldLabel = label;
+            }
+
+            wrapper.appendChild(fieldLabel);
+            wrapper.appendChild(input);
+
+            container.appendChild(wrapper);
+        });
+
+        // حقول المساحة الأساسية محفوظة دائمًا في النموذج نفسه.
+        $('area-container').classList.add('hidden');
+    };
+
+    window.uploadImages = async function (files) {
+        if (!files || !files.length) return;
+
+        const maxImgs = Math.max(
+            1,
+            Number(selectedSubObj && selectedSubObj.max_images) || 5
+        );
+
+        if (uploadedImgs.length + files.length > maxImgs) {
+            showModal(
+                'تنبيه الوسائط',
+                `الحد الأقصى المسموح به لهذا القسم هو ${maxImgs} صور فقط.`,
+                true
+            );
+            return;
+        }
+
+        const btn = $('final-btn');
+        const oldText = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML =
+            '<i class="fa-solid fa-spinner fa-spin"></i> جاري رفع الصور...';
+
+        try {
+            for (const file of Array.from(files)) {
+                if (!file.type.startsWith('image/')) {
+                    continue;
+                }
+
+                const extension =
+                    (file.name.split('.').pop() || 'jpg')
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]/g, '') || 'jpg';
+
+                const fileName =
+                    'img_' + Date.now() + '_' +
+                    Math.random().toString(36).slice(2) +
+                    '.' + extension;
+
+                const response = await fetch(
+                    S3_BASE_ENDPOINT + fileName,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Content-Type': file.type
+                        },
+                        body: file
+                    }
+                );
+
+                if (!response.ok) {
+                    console.error(
+                        'Image upload failed:',
+                        response.status,
+                        await response.text()
+                    );
+                    continue;
+                }
+
+                const finalUrl = PUBLIC_VIEW_BASE + fileName;
+                uploadedImgs.push(finalUrl);
+
+                const imgContainer = document.createElement('div');
+
+                imgContainer.className =
+                    'relative min-w-[80px] h-20 rounded-2xl overflow-hidden border border-zinc-800 shrink-0';
+
+                const image = document.createElement('img');
+                image.src = finalUrl;
+                image.alt = 'صورة العقار';
+                image.className = 'w-full h-full object-cover';
+
+                imgContainer.appendChild(image);
+
+                $('gallery').insertBefore(
+                    imgContainer,
+                    $('photo-add-btn')
+                );
+            }
+
+            if (!uploadedImgs.length) {
+                showModal(
+                    'تعذر رفع الصور',
+                    'لم يتم رفع أي صورة بنجاح. تحقق من إعدادات التخزين وصلاحيات Supabase.',
+                    true
+                );
+            }
+        } catch (error) {
+            console.error('Image upload error:', error);
+
+            showModal(
+                'خطأ في رفع الصور',
+                'حدث خطأ أثناء الاتصال بخدمة رفع الصور.',
+                true
+            );
+        } finally {
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+        }
+    };
+
+    window.uploadMasterPlanImage = async function (file) {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showModal(
+                'ملف غير صالح',
+                'يرجى اختيار صورة للكتالوج أو الماستر بلان.',
+                true
+            );
+            return;
+        }
+
+        const statusDiv = $('plan-status');
+
+        statusDiv.textContent = 'جاري رفع الكتالوج / الماستر بلان...';
+
+        try {
+            const extension =
+                (file.name.split('.').pop() || 'jpg')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, '') || 'jpg';
+
+            const fileName =
+                'plan_' + Date.now() + '_' +
+                Math.random().toString(36).slice(2) +
+                '.' + extension;
+
+            const response = await fetch(
+                S3_BASE_ENDPOINT + fileName,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Content-Type': file.type
+                    },
+                    body: file
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('فشل رفع الصورة إلى التخزين.');
+            }
+
+            uploadedPlanImgUrl = PUBLIC_VIEW_BASE + fileName;
+
+            statusDiv.textContent =
+                'تم رفع صورة الماستر بلان بنجاح.';
+        } catch (error) {
+            console.error('Master plan upload error:', error);
+
+            uploadedPlanImgUrl = '';
+
+            statusDiv.textContent =
+                'حدث خطأ أثناء الرفع. حاول مرة أخرى.';
+        }
+    };
+
+    function getNumber(id) {
+        const input = $(id);
+
+        if (!input) return null;
+
+        const value = input.value.trim();
+
+        if (!value) return null;
+
+        const number = Number(value);
+
+        return Number.isFinite(number) && number >= 0
+            ? number
+            : null;
+    }
+
+    function requireNumber(id, label) {
+        const value = getNumber(id);
+
+        if (value === null) {
+            showModal(
+                'بيانات ناقصة',
+                'يرجى إدخال ' + label + ' بصورة صحيحة.',
+                true
+            );
+
+            if ($(id)) $(id).focus();
+
+            return null;
+        }
+
+        return value;
+    }
+
+    window.saveAdToFirebase = async function () {
+        if (typeof db === 'undefined' || !db) {
+            showModal(
+                'خطأ في الاتصال',
+                'Firestore غير جاهز. تأكد من تهيئة Firebase.',
+                true
+            );
+            return;
+        }
+
+        if (typeof auth === 'undefined' || !auth.currentUser) {
+            showModal(
+                'خطأ في الجلسة',
+                'انتهت الجلسة، يرجى إعادة تسجيل الدخول.',
+                true
+            );
+            return;
+        }
+
+        if (!selectedMain || !selectedSubObj) {
+            showModal(
+                'نوع العقار غير محدد',
+                'يرجى اختيار القسم الرئيسي والنوع الفرعي.',
+                true
+            );
+            return;
+        }
+
+        const title = $('g-title').value.trim();
+        const phone = $('g-phone').value.trim();
+        const street = $('g-street').value.trim();
+        const area = requireNumber('g-area', 'المساحة الإجمالية');
+
+        if (area === null) return;
+
+        if (!title) {
+            showModal('بيانات ناقصة', 'يرجى كتابة عنوان الإعلان.', true);
+            return;
+        }
+
+        if (!phone) {
+            showModal('بيانات ناقصة', 'يرجى كتابة رقم الهاتف.', true);
+            return;
+        }
+
+        if (!selectedGov || !selectedCity) {
+            showModal(
+                'الموقع غير محدد',
+                'يرجى تحديد المحافظة والمدينة.',
+                true
+            );
+            return;
+        }
+
+        if (!uploadedImgs.length) {
+            showModal(
+                'الصور مطلوبة',
+                'يرجى رفع صورة واحدة على الأقل للعقار.',
+                true
+            );
+            return;
+        }
+
+        const type = getSpecificationType();
+
+        let price = '';
+        let minPriceVal = null;
+        let maxPriceVal = null;
+
+        if (selectedFlow === 'resale') {
+            const priceValue = requireNumber(
+                'g-price',
+                'السعر الإجمالي'
+            );
+
+            if (priceValue === null) return;
+
+            price = priceValue;
+        } else {
+            minPriceVal = requireNumber(
+                'g-min-price',
+                'أقل سعر للمتر'
+            );
+
+            if (minPriceVal === null) return;
+
+            maxPriceVal = requireNumber(
+                'g-max-price',
+                'أعلى سعر للمتر'
+            );
+
+            if (maxPriceVal === null) return;
+
+            if (maxPriceVal < minPriceVal) {
+                showModal(
+                    'السعر غير صحيح',
+                    'أعلى سعر للمتر يجب أن يكون أكبر من أو يساوي أقل سعر للمتر.',
+                    true
+                );
+                return;
+            }
+
+            price = `${minPriceVal} - ${maxPriceVal} للمتر`;
+        }
+
+        /*
+         * المواصفات الأساسية:
+         * نخزن القيم كأرقام عند توفرها.
+         * وتظل أسماء الخصائص عربية وواضحة داخل specs.
+         */
+        const specifications = {
+            'المساحة الإجمالية': area
+        };
+
+        if (type === 'residential' || type === 'villa') {
+            const rooms = requireNumber('g-rooms', 'عدد الغرف');
+            if (rooms === null) return;
+
+            const baths = requireNumber('g-baths', 'عدد الحمامات');
+            if (baths === null) return;
+
+            specifications['الغرف'] = rooms;
+            specifications['الحمامات'] = baths;
+        }
+
+        if (type === 'land') {
+            const meterPrice = requireNumber(
+                'g-meter-price',
+                'سعر المتر'
+            );
+
+            if (meterPrice === null) return;
+
+            const buildingRatio = requireNumber(
+                'g-building-ratio',
+                'نسبة البناء'
+            );
+
+            if (buildingRatio === null) return;
+
+            if (buildingRatio > 100) {
+                showModal(
+                    'نسبة البناء غير صحيحة',
+                    'أدخل نسبة بناء من 0 إلى 100.',
+                    true
+                );
+                return;
+            }
+
+            specifications['سعر المتر'] = meterPrice;
+            specifications['نسبة البناء'] = buildingRatio;
+        }
+
+        if (type === 'mall') {
+            const finishing = $('g-finishing').value;
+
+            if (!finishing) {
+                showModal(
+                    'بيانات ناقصة',
+                    'يرجى اختيار مستوى التشطيب.',
+                    true
+                );
+                return;
+            }
+
+            specifications['التشطيب'] = finishing;
+        }
+
+        // تفاصيل أسعار مشاريع Premium
+        if (selectedFlow === 'premium') {
+            specifications['أقل سعر للمتر'] = minPriceVal;
+            specifications['أعلى سعر للمتر'] = maxPriceVal;
+        }
+
+        // الحقول الإضافية القادمة من لوحة الأدمن
+        document.querySelectorAll('.dynamic-input').forEach(input => {
+            const label = input.dataset.fieldLabel;
+            const value = String(input.value || '').trim();
+
+            if (!label || !value) return;
+
+            specifications[label] = value;
+        });
+
+        const fullLocation =
+            `${selectedGov} - ${selectedCity}` +
+            (street ? ' - ' + street : '');
+
+        const btn = $('final-btn');
+        const oldButtonText = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML =
+            '<i class="fa-solid fa-spinner fa-spin"></i> جاري النشر...';
+
+        try {
+            const userRef = db.collection('users')
+                .doc(auth.currentUser.uid);
+
+            const userDoc = await userRef.get();
+            const userData = userDoc.exists
+                ? userDoc.data()
+                : {};
+
+            const expireDate = new Date();
+            expireDate.setDate(expireDate.getDate() + 30);
+
+            const targetCollection =
+                selectedFlow === 'premium'
+                    ? 'premium_ads'
+                    : 'ads';
+
+            const newAdRef = db.collection(targetCollection).doc();
+
+            const adData = {
+                userId: auth.currentUser.uid,
+
+                parentCompanyId:
+                    userData.parentCompanyId || null,
+
+                publisherName:
+                    userData.name || 'مندوب عقاري',
+
+                title: title,
+                price: price,
+                area: area,
+
+                phone: phone,
+                whatsapp: phone,
+
+                location: fullLocation,
+                governorate: selectedGov,
+                city: selectedCity,
+                street: street,
+
+                desc: $('g-desc').value.trim(),
+
+                mainType: selectedMain,
+                mainTypeName: getMainName(),
+
+                subType: getSubName(),
+                subTypeKey: selectedSubKey,
+
+                // نوع موحد لتسهيل عرضه في الموقع لاحقاً
+                propertyType: type,
+
+                image: uploadedImgs[0],
+                allImages: uploadedImgs,
+
+                pdfFile: uploadedPlanImgUrl || '',
+
+                specs: specifications,
+
+                createdAt:
+                    firebase.firestore.FieldValue.serverTimestamp(),
+
+                expireAt:
+                    firebase.firestore.Timestamp.fromDate(expireDate)
+            };
+
+            /*
+             * نستخدم Batch للحفاظ على عملية النشر الأصلية
+             * وتحديث عدد عقارات المستخدم في نفس العملية.
+             */
+            const batch = db.batch();
+
+            batch.set(newAdRef, adData);
+
+            batch.set(
+                userRef,
+                {
+                    propertiesCount:
+                        firebase.firestore.FieldValue.increment(1)
+                },
+                { merge: true }
+            );
+
+            await batch.commit();
+
+            showModal(
+                'تم النشر بنجاح',
+                `تم نشر إعلان ${getMainName()} - ${getSubName()} بنجاح. تم حفظ المواصفات الأساسية والإضافية في قاعدة البيانات، وتنتهي صلاحية الإعلان بعد 30 يوماً.`
+            );
+
+            setTimeout(() => {
+                if (typeof loadPage === 'function') {
+                    loadPage('home');
+                }
+            }, 1500);
+
+        } catch (error) {
+            console.error('Save ad error:', error);
+
+            showModal(
+                'خطأ في النشر',
+                'تعذر نشر الإعلان. ' +
+                (error && error.message
+                    ? error.message
+                    : 'تحقق من الاتصال وصلاحيات Firestore.'),
+                true
+            );
+
+            btn.innerHTML = oldButtonText;
+            btn.disabled = false;
+        }
+    };
+})();
+</script>

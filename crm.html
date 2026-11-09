@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqaro CRM SaaS — إدارة الصفقات والفريق العقاري</title>
+    <!-- FontAwesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Tailwind CSS (Stable v3 CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+    <!-- مكتبة قراءة ملفات الإكسيل SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; background-color: #09090b; color: #f4f4f5; }
+        .glass-card { background: #18181c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+        .status-new { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .status-contacted { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .status-showing { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .status-closed { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .status-lost { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+        .animate-fade { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .sidebar-drawer { transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar-drawer.open { transform: translateX(0); }
+    </style>
+</head>
+<body class="min-h-screen pb-20 antialiased relative">
+
+    <div id="toast-container" class="fixed top-5 left-5 z-[500] flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- شاشة تنبيه انتهاء باقة الـ CRM أو عدم الاشتراك -->
+    <div id="crm-subscription-lock-modal" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[600] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="max-w-md w-full glass-card p-8 border border-red-500/50 text-center shadow-2xl animate-fade">
+            <div class="w-16 h-16 bg-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-lock"></i></div>
+            <h3 class="text-xl font-black text-white mb-2">عذراً، انتهت صلاحية باقة الـ CRM</h3>
+            <p id="lock-modal-desc" class="text-zinc-300 text-xs leading-relaxed mb-6">لقد انتهت فترة التجربة المجانية أو باقتك الحالية من السيرفر. يرجى تجديد أو ترقية باقتك من المحفظة لمتابعة العمل.</p>
+            <div class="space-y-2">
+                <a href="packages.html" class="block w-full py-3.5 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-xs transition shadow-lg text-center">الذهاب لصفحة الباقات والمحفظة</a>
+                <button onclick="auth.signOut()" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl text-xs transition">تسجيل الخروج</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- شاشة اختيار الدور الأولية -->
+    <div id="role-welcome-modal" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[400] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="max-w-xl w-full glass-card p-8 lg:p-10 border border-red-500/35 text-center shadow-2xl animate-fade">
+            <h2 class="text-2xl font-black text-white mb-2">مرحباً بك في منصة أكارو العقارية</h2>
+            <p class="text-zinc-400 text-sm mb-6">حدد طبيعة حسابك لتهيئة لوحة التحكم الخاصة بك.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <div onclick="prepareRoleSelection('manager')" id="card-mgr" class="border-2 border-white/10 bg-zinc-900/80 p-6 rounded-2xl cursor-pointer text-center hover:border-purple-500 transition">
+                    <h4 class="font-black text-white text-base mb-1">مدير شركة / مسوق (Manager)</h4>
+                    <p class="text-xs text-zinc-400">إدارة الأرقام الخاصة بك، توزيع الداتا، وإدارة فريق المبيعات.</p>
+                </div>
+                <div onclick="prepareRoleSelection('sales')" id="card-sls" class="border-2 border-white/10 bg-zinc-900/80 p-6 rounded-2xl cursor-pointer text-center hover:border-blue-500 transition">
+                    <h4 class="font-black text-white text-base mb-1">مسؤول مبيعات (Sales)</h4>
+                    <p class="text-xs text-zinc-400">متابعة الأرقام المخصصة لك حصرياً وتسجيل التحديثات والمكالمات.</p>
+                </div>
+            </div>
+
+            <div id="sales-manager-link-box" class="hidden mb-6 text-right bg-zinc-900 p-4 rounded-xl border border-amber-500/40 animate-fade">
+                <label class="block text-xs font-bold text-amber-400 mb-1"><i class="fa-solid fa-key ml-1"></i> أدخل كود (UID) مدير الشركة للارتباط به:</label>
+                <input type="text" id="manager-uid-input" placeholder="مثال: abc123xyz..." class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-amber-500 dir-ltr text-right font-mono">
+            </div>
+
+            <button id="confirm-role-btn" onclick="executeCrmRoleSelection()" class="hidden w-full py-3.5 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-sm transition shadow-lg">دخول لوحة التحكم</button>
+        </div>
+    </div>
+
+    <!-- شاشة الانتظار للسيلز الجديد -->
+    <div id="sales-pending-modal" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[410] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="max-w-md w-full glass-card p-8 border border-amber-500/50 text-center shadow-2xl animate-fade">
+            <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-clock-rotate-left animate-spin"></i></div>
+            <h3 class="text-xl font-black text-white mb-2">بانتظار موافقة المدير</h3>
+            <p class="text-zinc-300 text-xs leading-relaxed mb-6">لقد قمت بالارتباط بمديرك بنجاح، وحسابك الآن بانتظار الاعتماد والموافقة.</p>
+            <button onclick="auth.signOut()" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl text-xs transition">تسجيل الخروج</button>
+        </div>
+    </div>
+
+    <!-- Navbar متجاوب ونظيف -->
+    <header class="border-b border-white/10 bg-[#121215]/90 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center justify-between w-full sm:w-auto">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-gradient-to-tr from-red-600 to-rose-500 rounded-xl flex items-center justify-center font-black text-white text-lg">A</div>
+                    <div>
+                        <h1 class="text-sm sm:text-base font-black tracking-wide text-white">أكارو CRM <span id="role-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mr-1">تحميل...</span></h1>
+                        <p class="text-[10px] text-zinc-400">إدارة الصفقات العقارية — <span id="server-plan-name-display" class="text-amber-400 font-bold">جاري تحميل باقة السيرفر...</span></p>
+                    </div>
+                </div>
+                <button onclick="toggleSidebarMenu()" class="sm:hidden w-9 h-9 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white flex items-center justify-center text-base transition relative">
+                    <i class="fa-solid fa-bars-staggered"></i>
+                    <span id="sidebar-notification-dot-mob" class="hidden absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <a href="packages.html" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-amber-400 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-amber-500/20">
+                    <i class="fa-solid fa-gem"></i> باقاتي والمحفظة
+                </a>
+                <button onclick="openAddLeadModal()" id="manager-add-lead-btn" class="hidden flex-1 sm:flex-none px-3.5 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl text-xs font-bold shadow-lg items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-user-plus"></i> إضافة رقم أو عميل يدوي
+                </button>
+                <button onclick="toggleSidebarMenu()" class="hidden sm:flex w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white items-center justify-center text-lg transition relative" title="قائمة الخيارات">
+                    <i class="fa-solid fa-bars-staggered"></i>
+                    <span id="sidebar-notification-dot" class="hidden absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- القائمة الجانبية الانزلاقية (Sidebar Drawer) -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[350] hidden transition-opacity" onclick="toggleSidebarMenu()"></div>
+    <aside id="sidebar-drawer" class="fixed top-0 right-0 h-full w-80 bg-[#141418] border-l border-white/10 z-[360] sidebar-drawer flex flex-col p-6 shadow-2xl overflow-y-auto" dir="rtl">
+        <div class="flex items-center justify-between mb-6 border-b border-white/10 pb-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">⚙️</div>
+                <h3 class="font-bold text-white text-base">قائمة التحكم والخدمات الاحترافية</h3>
+            </div>
+            <button onclick="toggleSidebarMenu()" class="text-zinc-400 hover:text-white p-2"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+
+        <div class="space-y-3 flex-1">
+            <button onclick="requestNotificationPermission(); toggleSidebarMenu();" class="w-full p-3 rounded-xl bg-amber-600/20 border border-amber-500/30 text-amber-300 hover:bg-amber-600 hover:text-white text-xs font-bold transition flex items-center gap-3">
+                <i class="fa-solid fa-bell text-base"></i> تفعيل الإشعارات الخارجية
+            </button>
+            <button id="sidebar-stats-btn" onclick="openAnalyticsTabModal(); toggleSidebarMenu();" class="hidden w-full p-3 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white text-xs font-bold transition flex items-center gap-3">
+                <i class="fa-solid fa-chart-pie text-base"></i> الإحصائيات والتقارير الاحترافية
+            </button>
+            <button id="sidebar-reports-btn" onclick="openWhatsAppReportsModal(); toggleSidebarMenu();" class="hidden w-full p-3 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-600 hover:text-white text-xs font-bold transition flex items-center gap-3">
+                <i class="fa-brands fa-whatsapp text-base"></i> تقارير واتساب (أسبوعية وشهرية)
+            </button>
+            <button id="sidebar-team-btn" onclick="openTeamManagerModal(); toggleSidebarMenu();" class="hidden w-full p-3 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600 hover:text-white text-xs font-bold transition flex items-center justify-between">
+                <span class="flex items-center gap-3"><i class="fa-solid fa-users-gear text-base"></i> إدارة فريق المبيعات</span>
+                <span id="sidebar-pending-badge" class="hidden bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+            </button>
+            <button id="sidebar-excel-btn" onclick="openExcelImportModal(); toggleSidebarMenu();" class="hidden w-full p-3 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-300 hover:bg-blue-600 hover:text-white text-xs font-bold transition flex items-center gap-3">
+                <i class="fa-solid fa-file-excel text-base"></i> رفع ملف إكسيل وتوزيعه
+            </button>
+            <button onclick="promptSwitchRole(); toggleSidebarMenu();" class="w-full p-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-amber-400 text-xs font-bold border border-white/10 transition flex items-center gap-3">
+                <i class="fa-solid fa-rotate text-base"></i> تبديل صلاحيات الحساب
+            </button>
+        </div>
+
+        <div class="pt-4 border-t border-white/10 text-center">
+            <p id="sidebar-footer-plan-text" class="text-[10px] text-zinc-500">الباقة النشطة من السيرفر</p>
+        </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+        
+        <div id="manager-uid-display-card" class="hidden mb-6 glass-card p-4 border border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 bg-purple-950/20">
+            <div>
+                <h4 class="text-xs font-bold text-purple-300 mb-1"><i class="fa-solid fa-id-badge ml-1"></i> كود التعريفي (UID) الخاص بك كمدير:</h4>
+                <code id="my-manager-uid-text" class="text-sm font-mono text-white bg-zinc-900 px-3 py-1 rounded-lg border border-white/10 select-all">جاري الجلب...</code>
+            </div>
+            <button onclick="copyManagerUid()" class="w-full sm:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl transition shadow-md">
+                <i class="fa-solid fa-copy ml-1"></i> نسخ الكود
+            </button>
+        </div>
+
+        <div id="sales-binding-settings-card" class="hidden mb-6 glass-card p-4 border border-blue-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 bg-blue-950/20">
+            <div class="w-full sm:w-auto">
+                <h4 class="text-xs font-bold text-blue-300 mb-1"><i class="fa-solid fa-link ml-1"></i> ارتباطك بمدير الشركة الحالي (Manager UID):</h4>
+                <div class="flex items-center gap-2 mt-1">
+                    <input type="text" id="current-sales-mgr-uid" placeholder="غير مرتبط بمدير" class="bg-zinc-900 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white font-mono dir-ltr w-full sm:w-64 focus:outline-none focus:border-blue-500">
+                    <button onclick="updateSalesManagerBinding()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shrink-0">تحديث</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="manager-excel-archive-section" class="hidden mb-8 glass-card p-6 border border-blue-500/30">
+            <h3 class="text-sm font-black text-blue-400 flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-folder-open"></i> أرشيف ملفات الإكسيل المرفوعة (Files Archive)
+            </h3>
+            <div id="excel-files-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <p class="text-xs text-zinc-500">جاري تحميل الأرشيف...</p>
+            </div>
+        </div>
+
+        <div id="manager-view-toggle-bar" class="hidden mb-6 flex items-center gap-2 overflow-x-auto pb-2">
+            <button onclick="switchManagerView('all')" id="btn-view-all" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white transition shadow-md shrink-0">
+                <i class="fa-solid fa-users ml-1"></i> كل داتا التيم ومتابعة السيلز
+            </button>
+            <button onclick="switchManagerView('my_private')" id="btn-view-private" class="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-300 hover:text-white transition shrink-0">
+                <i class="fa-solid fa-user-shield ml-1"></i> فايل المدير الخاص بي (أرقامي وحدي)
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="glass-card p-4 sm:p-5"><p class="text-xs text-zinc-400 font-bold mb-1">إجمالي الأرقام والعملاء</p><h3 id="stat-total" class="text-xl sm:text-2xl font-black text-white">0</h3></div>
+            <div class="glass-card p-4 sm:p-5"><p class="text-xs text-zinc-400 font-bold mb-1">عملاء جدد</p><h3 id="stat-new" class="text-xl sm:text-2xl font-black text-blue-400">0</h3></div>
+            <div class="glass-card p-4 sm:p-5"><p class="text-xs text-zinc-400 font-bold mb-1">معاينات قائمة</p><h3 id="stat-showing" class="text-xl sm:text-2xl font-black text-purple-400">0</h3></div>
+            <div class="glass-card p-4 sm:p-5"><p class="text-xs text-zinc-400 font-bold mb-1">صفقات مغلقة</p><h3 id="stat-closed" class="text-xl sm:text-2xl font-black text-emerald-400">0</h3></div>
+        </div>
+
+        <div class="glass-card overflow-hidden shadow-2xl mb-12">
+            <div class="p-4 border-b border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3 bg-zinc-900/40">
+                <div>
+                    <h4 id="table-title" class="font-bold text-sm text-white">الأرقام والعملاء</h4>
+                    <p id="table-subtitle" class="text-[11px] text-zinc-400">عرض تفصيلي متجاوب بدون أي مشاكل في العرض على الموبايل</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button id="distribute-file-btn" onclick="openDistributionModal()" class="hidden px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-users-gear"></i> <span>توزيع الملف</span>
+                    </button>
+                    <button id="file-options-btn" onclick="openFileOptionsModal()" class="hidden px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-amber-400 rounded-xl text-xs font-bold transition flex items-center gap-2">
+                        <i class="fa-solid fa-gear"></i> <span>خيارات الملف</span>
+                    </button>
+                    <button onclick="loadLeads()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs transition">عرض الكل</button>
+                </div>
+            </div>
+
+            <div id="leads-cards-container" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="col-span-full p-8 text-center text-zinc-500"><i class="fa-solid fa-spinner animate-spin text-2xl text-red-500 mb-2"></i><p>جاري تحميل الأرقام والداتا...</p></div>
+            </div>
+
+            <div class="p-4 bg-zinc-900/60 border-t border-white/10 flex items-center justify-between">
+                <button id="prev-page-btn" onclick="changePage(-1)" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold transition disabled:opacity-40">السابق</button>
+                <span id="page-indicator" class="text-xs text-zinc-400 font-bold">الصفحة 1 من 1</span>
+                <button id="next-page-btn" onclick="changePage(1)" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold transition disabled:opacity-40">التالي</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 💬 زر الشات العائم -->
+    <div id="draggable-chat-widget" class="fixed z-50 flex flex-col items-end select-none" style="bottom: 25px; left: 25px;">
+        <div id="team-chat-modal" class="glass-card border border-purple-500/40 hidden flex flex-col shadow-2xl animate-fade overflow-hidden mb-3 w-80 sm:w-96" dir="rtl" style="height: 380px;">
+            <div class="bg-zinc-900 p-3 border-b border-white/10 flex items-center justify-between">
+                <h4 class="font-bold text-white text-xs flex items-center gap-2"><i class="fa-solid fa-comments text-purple-400"></i> غرفة محادثة الفريق</h4>
+                <button onclick="toggleTeamChatModal()" class="text-zinc-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-sm"></i></button>
+            </div>
+            <div id="chat-messages-container" class="flex-1 p-3 overflow-y-auto space-y-2.5 bg-[#0d0d10]/80 text-xs">
+                <p class="text-center text-zinc-500 py-4">جاري تحميل الرسائل...</p>
+            </div>
+            <div class="p-2.5 bg-zinc-900 border-t border-white/10 flex gap-2">
+                <input type="text" id="chat-input-message" placeholder="اكتب رسالتك لتيم العمل..." class="flex-1 bg-[#0d0d10] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500" onkeypress="if(event.key === 'Enter') sendTeamMessage()">
+                <button onclick="sendTeamMessage()" class="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition">إرسال</button>
+            </div>
+        </div>
+        <div id="chat-drag-handle" onclick="toggleTeamChatModal()" class="w-12 h-12 bg-gradient-to-tr from-purple-600 to-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center text-lg hover:scale-105 transition cursor-pointer" title="فتح شات التيم">
+            <i class="fa-solid fa-comments pointer-events-none"></i>
+        </div>
+    </div>
+
+    <!-- مودالات النظام المختلفة -->
+    <div id="whatsapp-reports-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[280] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="glass-card w-full max-w-xl p-6 lg:p-8 relative border border-emerald-500/40 text-center animate-fade">
+            <div class="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-brands fa-whatsapp text-emerald-400"></i> إرسال تقارير واتساب (أسبوعية وشهرية)</h3>
+                <button onclick="closeWhatsAppReportsModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-zinc-400 mb-6">اختر نوع التقرير لتجهيز رسالة الإحصائيات وإرسالها مباشرة عبر الواتساب إلى إدارة الشركة أو فريق العمل.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <button onclick="generateWhatsAppReport('weekly')" class="p-5 bg-zinc-900 border border-white/10 hover:border-emerald-500 rounded-2xl text-center transition">
+                    <i class="fa-solid fa-calendar-week text-2xl text-emerald-400 mb-2"></i>
+                    <h4 class="font-bold text-white text-sm mb-1">التقرير الأسبوعي</h4>
+                    <p class="text-[11px] text-zinc-400">ملخص الصفقات والمكالمات خلال الأسبوع.</p>
+                </button>
+                <button onclick="generateWhatsAppReport('monthly')" class="p-5 bg-zinc-900 border border-white/10 hover:border-emerald-500 rounded-2xl text-center transition">
+                    <i class="fa-solid fa-calendar-days text-2xl text-emerald-400 mb-2"></i>
+                    <h4 class="font-bold text-white text-sm mb-1">التقرير الشهري</h4>
+                    <p class="text-[11px] text-zinc-400">إجمالي صفقات الشهر وإنجازات الفريق.</p>
+                </button>
+            </div>
+            <div id="whatsapp-preview-box" class="hidden text-right bg-[#0d0d10] p-4 rounded-xl border border-white/10 mb-4">
+                <label class="block text-xs font-bold text-emerald-400 mb-1">معاينة نص التقرير:</label>
+                <textarea id="whatsapp-report-text" rows="5" class="w-full bg-zinc-900 border border-white/10 rounded-lg p-3 text-xs text-white focus:outline-none focus:border-emerald-500 dir-rtl"></textarea>
+                <a id="whatsapp-send-link" href="#" target="_blank" class="mt-3 block w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs text-center transition shadow-lg">إرسال التقرير عبر الواتساب الآن</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="team-manager-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[260] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="glass-card w-full max-w-3xl p-6 lg:p-8 relative border border-purple-500/40 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-users-gear text-purple-400"></i> إدارة فريق المبيعات والصلاحيات</h3>
+                <button onclick="closeTeamManagerModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="pending-agents-section" class="hidden mb-6 bg-amber-950/20 border border-amber-500/40 p-4 rounded-2xl">
+                <h4 class="text-xs font-black text-amber-400 mb-3 flex items-center gap-1.5"><i class="fa-solid fa-user-clock"></i> أعضاء جدد بانتظار الاعتماد</h4>
+                <div id="pending-agents-list" class="space-y-2"></div>
+            </div>
+            <div class="mb-4"><input type="text" id="team-search-input" onkeyup="filterTeamAgents()" placeholder="بحث باسم السيلز..." class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-sm text-white"></div>
+            <div id="team-agents-list" class="space-y-3 pr-1"><p class="text-center text-zinc-500 py-4">جاري تحميل الفريق...</p></div>
+        </div>
+    </div>
+
+    <div id="distribution-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[300] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="glass-card w-full max-w-lg p-6 lg:p-8 relative border border-purple-500/40 text-center animate-fade">
+            <h3 class="text-xl font-bold text-white mb-2">خيارات توزيع الليدز على الفريق</h3>
+            <div class="space-y-3 text-right mb-6">
+                <label class="flex items-start gap-3 p-3 bg-zinc-900 border border-white/10 rounded-xl cursor-pointer">
+                    <input type="radio" name="dist_mode" value="equal" checked class="mt-1 accent-purple-500">
+                    <div><span class="font-bold text-white text-sm block">توزيع عشوائي متساوي (Round Robin)</span></div>
+                </label>
+                <label class="flex items-start gap-3 p-3 bg-zinc-900 border border-white/10 rounded-xl cursor-pointer">
+                    <input type="radio" name="dist_mode" value="single_agent" class="mt-1 accent-purple-500">
+                    <div><span class="font-bold text-white text-sm block">إسناد الملف كاملاً لسيلز معين</span></div>
+                </label>
+                <div id="single-agent-select-box" class="hidden pr-6"><select id="target-sales-select" class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-2.5 text-xs text-white"></select></div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="executeAdvancedDistribution()" class="flex-1 py-3 bg-purple-600 text-white font-bold rounded-xl text-xs">بدء التوزيع</button>
+                <button onclick="closeDistributionModal()" class="py-3 px-5 bg-zinc-800 text-zinc-300 font-bold rounded-xl text-xs">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="switch-role-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[450] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="max-w-md w-full glass-card p-8 border border-amber-500/40 text-center relative shadow-2xl animate-fade">
+            <h3 class="text-xl font-black text-white mb-2">تبديل صلاحيات الحساب</h3>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button onclick="executeRoleSwitchTo('manager')" class="py-3 bg-purple-600/20 text-purple-300 font-bold rounded-xl text-xs">مدير</button>
+                <button onclick="executeRoleSwitchTo('sales')" class="py-3 bg-blue-600/20 text-blue-300 font-bold rounded-xl text-xs">سيلز</button>
+            </div>
+            <button onclick="document.getElementById('switch-role-modal').classList.add('hidden')" class="w-full py-2 bg-transparent text-zinc-400 text-xs">إلغاء</button>
+        </div>
+    </div>
+
+    <div id="analytics-tab-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[270] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="glass-card w-full max-w-3xl p-6 lg:p-8 relative border border-emerald-500/40 max-h-[90vh] overflow-y-auto animate-fade">
+            <div class="flex items-center justify-between mb-6 border-b border-white/10 pb-4">
+                <h3 class="text-xl font-bold text-white">إحصائيات أداء الفريق</h3>
+                <button onclick="closeAnalyticsTabModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="analytics-leaderboard-list" class="space-y-3"><p class="text-xs text-zinc-500">جاري حساب الترتيب...</p></div>
+        </div>
+    </div>
+
+    <div id="file-options-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[260] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="glass-card w-full max-w-md p-6 relative border border-amber-500/40 text-center">
+            <h3 class="text-lg font-bold text-white mb-2">خيارات الملف</h3>
+            <div class="space-y-3">
+                <button onclick="executeFileOption('DELETE_ALL')" class="w-full py-3 bg-red-600 text-white font-bold rounded-xl text-xs">حذف الملف والداتا نهائياً</button>
+                <button onclick="executeFileOption('HIDE_ALL')" class="w-full py-3 bg-amber-600 text-white font-bold rounded-xl text-xs">إخفاء الملف</button>
+                <button onclick="closeFileOptionsModal()" class="w-full py-2 bg-transparent text-zinc-400 text-xs">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="excel-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[250] hidden flex items-center justify-center p-6" dir="rtl">
+        <div class="glass-card w-full max-w-lg p-6 lg:p-8 relative border border-blue-500/40">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">رفع ملف ليدز جديد</h3>
+                <button onclick="closeExcelImportModal()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="excel-campaign-name" placeholder="اسم الملف..." class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-sm text-white">
+                <div class="border-2 border-dashed border-white/20 rounded-xl p-6 text-center bg-zinc-900/50 relative">
+                    <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleExcelFileSelect(event)">
+                    <p id="file-name-display" class="text-xs font-bold text-white">اختر ملف الإكسيل</p>
+                </div>
+                <button onclick="processAndUploadExcelFile()" class="w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl text-sm">حفظ الملف</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="lead-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-xl p-6 lg:p-8 relative max-h-[90vh] overflow-y-auto">
+            <h3 id="lead-modal-title" class="text-xl font-bold text-white mb-6">إضافة رقم أو عميل</h3>
+            <form id="lead-form" onsubmit="saveLead(event)" class="space-y-4 text-right">
+                <input type="hidden" id="edit-lead-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold text-zinc-400 mb-1">اسم العميل *</label><input type="text" id="lead-name" required class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-sm text-white"></div>
+                    <div><label class="block text-xs font-bold text-zinc-400 mb-1">رقم الهاتف *</label><input type="tel" id="lead-phone" required class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-sm text-white dir-ltr text-right"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold text-zinc-400 mb-1">العقار</label><input type="text" id="lead-property" class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-sm text-white"></div>
+                    <div><label class="block text-xs font-bold text-zinc-400 mb-1">الميزانية</label><input type="number" id="lead-budget" class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-sm text-white"></div>
+                </div>
+                <div class="p-4 bg-zinc-900 border border-purple-500/30 rounded-2xl space-y-3">
+                    <label class="block text-xs font-bold text-purple-400">وجهة الرقم:</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 cursor-pointer text-xs text-white"><input type="radio" name="lead_dest_type" value="private_manager" checked class="accent-purple-500" onchange="toggleDestSelect()"> فايل المدير الخاص</label>
+                        <label class="flex items-center gap-2 cursor-pointer text-xs text-white"><input type="radio" name="lead_dest_type" value="specific_agent" class="accent-purple-500" onchange="toggleDestSelect()"> إسناد لسيلز</label>
+                        <label class="flex items-center gap-2 cursor-pointer text-xs text-white"><input type="radio" name="lead_dest_type" value="all_sales" class="accent-purple-500" onchange="toggleDestSelect()"> متاح لكل التيم</label>
+                    </div>
+                    <div id="specific-agent-box" class="hidden pt-2"><select id="target-sales-dropdown" class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-2.5 text-xs text-white"></select></div>
+                </div>
+                <div><label class="block text-xs font-bold text-zinc-400 mb-1">الحالة</label>
+                    <select id="lead-status" class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-sm text-white">
+                        <option value="NEW">جديد (New)</option><option value="CONTACTED">تم التواصل</option><option value="SHOWING">معاينة</option><option value="CLOSED">تم البيع</option><option value="LOST">غير مهتم</option>
+                    </select>
+                </div>
+                <div class="p-4 bg-zinc-900 border border-amber-500/30 rounded-2xl space-y-3">
+                    <label class="block text-xs font-bold text-amber-400">موعد الاتصال القادم:</label>
+                    <input type="datetime-local" id="lead-next-followup" class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-2.5 text-xs text-white dir-ltr text-right">
+                </div>
+                <div class="p-4 bg-zinc-900 border border-blue-500/30 rounded-2xl space-y-3">
+                    <label class="block text-xs font-bold text-blue-400 mb-2">ملاحظات المكالمة:</label>
+                    <textarea id="lead-last-call-note" rows="3" class="w-full bg-[#0d0d10] border border-white/10 rounded-xl p-3 text-xs text-white mb-3"></textarea>
+                    <div class="flex items-center gap-6 pt-2 border-t border-white/10 text-xs">
+                        <label class="flex items-center gap-2 text-zinc-300"><input type="checkbox" id="comm-phone" class="w-4 h-4 accent-blue-500 rounded"> اتصال هاتفي</label>
+                        <label class="flex items-center gap-2 text-zinc-300"><input type="checkbox" id="comm-whatsapp" class="w-4 h-4 accent-emerald-500 rounded"> واتساب</label>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl text-sm">حفظ</button>
+                    <button type="button" onclick="closeLeadModal()" class="flex-1 py-3 bg-zinc-800 text-zinc-300 font-bold rounded-xl text-xs">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+            authDomain: "youssef-4170d.firebaseapp.com",
+            projectId: "youssef-4170d",
+            storageBucket: "youssef-4170d.appspot.com",
+            appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        let messaging = null;
+        try { if (firebase.messaging.isSupported()) messaging = firebase.messaging(); } catch (e) {}
+
+        let currentUser = null, crmRole = null, leadsData = [], parsedExcelRows = [], teamAgents = [];
+        let currentSelectedFileId = null, currentSelectedFileName = '';
+        let userSavedManagerId = null;
+        let managerCurrentViewMode = 'all';
+        let currentPage = 1;
+        const rowsPerPage = 12;
+
+        function showCustomToast(title, message) {
+            const container = document.getElementById('toast-container');
+            if(!container) return;
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-2xl border bg-zinc-900 border-amber-500/40 text-amber-300 shadow-2xl animate-fade`;
+            toast.innerHTML = `<h5 class="font-bold text-sm text-white">${title}</h5><p class="text-xs">${message}</p>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4500);
+        }
+
+        function toggleSidebarMenu() {
+            const drawer = document.getElementById('sidebar-drawer');
+            const overlay = document.getElementById('sidebar-overlay');
+            if(!drawer || !overlay) return;
+            const isOpen = drawer.classList.toggle('open');
+            overlay.classList.toggle('hidden', !isOpen);
+        }
+
+        // تم إصلاح زر الإشعارات بالكامل ليعمل بشكل آمن ومستقر
+        async function requestNotificationPermission() {
+            try {
+                if (!messaging) {
+                    return showCustomToast("تنبيه", "المتصفح لا يدعم إشعارات الويب المباشرة.");
+                }
+                
+                // تسجيل الـ Service Worker أولاً لضمان عمل الإشعارات بنجاح
+                if ('serviceWorker' in navigator) {
+                    await navigator.serviceWorker.register('firebase-messaging-sw.js').catch(() => {});
+                }
+
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const token = await messaging.getToken({ vapidKey: 'BN6Oqe-SfviCRaTWU5dURvv7p307FdFDQscEP6LOqg9wg_q8WGoNKCZxeG-khrrs27D2WuLuAEugoaj5guAuIQc' }).catch(() => null);
+                    if (token && currentUser) {
+                        await db.collection('crm_users').doc(currentUser.uid).set({ fcmToken: token }, { merge: true });
+                    }
+                    showCustomToast("تم بنجاح", "تم تفعيل الإشعارات الخارجية لجهازك بنجاح!");
+                } else {
+                    showCustomToast("تنبيه", "تم رفض إذن الإشعارات من المتصفح.");
+                }
+            } catch (error) {
+                showCustomToast("خطأ", "تعذر تفعيل الإشعارات حالياً.");
+            }
+        }
+
+        async function checkCrmSubscriptionStatus(userData, userId) {
+            const activePlanId = userData.activePlanId;
+            const crmTrialUsed = userData.crmTrialUsed;
+            const endDateRaw = userData.crmTrialEndDate;
+            const now = new Date();
+            const endDate = endDateRaw ? (endDateRaw.toDate ? endDateRaw.toDate() : new Date(endDateRaw)) : null;
+
+            if (!activePlanId && !crmTrialUsed) {
+                showWelcomeFreeTrialModal(userId);
+                return false;
+            }
+
+            if (endDate && now <= endDate) {
+                let planDisplayName = activePlanId;
+                try {
+                    const planDoc = await db.collection('crm_plans').doc(activePlanId).get();
+                    if (planDoc.exists) {
+                        planDisplayName = planDoc.data().name || activePlanId;
+                    } else if (activePlanId === 'crm_trial') {
+                        planDisplayName = "الباقة التجريبية";
+                    } else if (activePlanId === 'crm_basic') {
+                        planDisplayName = "الباقة الأساسية";
+                    } else if (activePlanId === 'crm_pro_monthly') {
+                        planDisplayName = "الباقة الاحترافية (شهرية)";
+                    } else if (activePlanId === 'crm_pro_yearly') {
+                        planDisplayName = "الباقة الاحترافية (سنوية)";
+                    }
+                } catch(e) {}
+
+                document.getElementById('server-plan-name-display').innerText = planDisplayName;
+                document.getElementById('sidebar-footer-plan-text').innerText = `الباقة النشطة: ${planDisplayName}`;
+                return true;
+            }
+
+            if (endDate && now > endDate) {
+                document.getElementById('crm-subscription-lock-modal').classList.remove('hidden');
+                document.getElementById('lock-modal-desc').innerText = "لقد انتهت فترة تجربتك المجانية أو باقتك السابقة. يرجى التوجه لصفحة الباقات وشحن باقة جديدة لمتابعة العمل.";
+                return false;
+            }
+
+            document.getElementById('crm-subscription-lock-modal').classList.remove('hidden');
+            return false;
+        }
+
+        function showWelcomeFreeTrialModal(userId) {
+            const modalHtml = `
+                <div id="welcome-trial-popup" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[700] flex items-center justify-center p-6" dir="rtl">
+                    <div class="max-w-md w-full glass-card p-8 border border-purple-500/50 text-center shadow-2xl animate-fade">
+                        <div class="w-16 h-16 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fa-solid fa-gift"></i></div>
+                        <h3 class="text-xl font-black text-white mb-2">أهلاً بك في أكارو CRM</h3>
+                        <p class="text-zinc-300 text-xs leading-relaxed mb-6">لأنك مستخدم جديد، يمكنك الآن تفعيل <b>الباقة التجريبية المجانية</b> لمدة 6 أيام والاستمتاع بكافة مميزات النظام والشات والفريق فوراً.</p>
+                        <button onclick="activateFreeTrialFromCrm('${userId}')" class="w-full py-3.5 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-xl text-xs transition shadow-lg">تفعيل التجربة المجانية والبدء الآن</button>
+                    </div>
+                </div>
+            `;
+            const div = document.createElement('div');
+            div.innerHTML = modalHtml;
+            document.body.appendChild(div);
+        }
+
+        async function activateFreeTrialFromCrm(userId) {
+            try {
+                const now = new Date();
+                const endDate = new Date();
+                endDate.setDate(now.getDate() + 6);
+
+                await db.collection('crm_users').doc(userId).set({
+                    activePlanId: 'crm_trial',
+                    crmTrialUsed: true,
+                    crmTrialStartDate: now,
+                    crmTrialEndDate: endDate
+                }, { merge: true });
+
+                showCustomToast("تم بنجاح", "تم تفعيل باقتك التجريبية لمدة 6 أيام بنجاح!");
+                setTimeout(() => location.reload(), 1500);
+            } catch(e) {
+                alert("حدث خطأ: " + e.message);
+            }
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) return window.location.href = 'index.html';
+            currentUser = user;
+            const userDocRef = db.collection('crm_users').doc(user.uid);
+            const doc = await userDocRef.get();
+
+            if (doc.exists && doc.data().role) {
+                const data = doc.data();
+
+                const isSubscribedValid = await checkCrmSubscriptionStatus(data, user.uid);
+                if (!isSubscribedValid) return;
+
+                crmRole = data.role;
+                userSavedManagerId = data.managerId || null;
+                
+                if (crmRole === 'sales' && data.status !== 'approved') {
+                    document.getElementById('sales-pending-modal').classList.remove('hidden');
+                    return;
+                }
+
+                applyCrmRoleUI();
+                await loadTeamAgentsSilent();
+                loadLeads();
+                if (crmRole === 'manager') {
+                    loadExcelFilesArchive();
+                    document.getElementById('my-manager-uid-text').innerText = currentUser.uid;
+                    checkPendingAgentsNotifications();
+                } else if (crmRole === 'sales') {
+                    document.getElementById('current-sales-mgr-uid').value = userSavedManagerId || '';
+                }
+                
+                loadTeamChatMessages();
+            } else {
+                document.getElementById('role-welcome-modal').classList.remove('hidden');
+            }
+        });
+
+        function prepareRoleSelection(role) {
+            window.tempSelectedRole = role;
+            const isSales = role === 'sales';
+            document.getElementById('sales-manager-link-box').classList.toggle('hidden', !isSales);
+            document.getElementById('confirm-role-btn').classList.remove('hidden');
+        }
+
+        async function executeCrmRoleSelection() {
+            const role = window.tempSelectedRole;
+            const managerId = role === 'sales' ? document.getElementById('manager-uid-input').value.trim() : null;
+            if (role === 'sales' && !managerId) return showCustomToast("تنبيه", "أدخل كود المدير!");
+
+            const initialStatus = role === 'manager' ? 'approved' : 'pending';
+
+            await db.collection('crm_users').doc(currentUser.uid).set({ 
+                role, 
+                managerId: managerId || null, 
+                status: initialStatus,
+                email: currentUser.email || 'مستخدم'
+            }, { merge: true });
+
+            location.reload();
+        }
+
+        async function updateSalesManagerBinding() {
+            const newMgrId = document.getElementById('current-sales-mgr-uid').value.trim();
+            if (!newMgrId) return showCustomToast("تنبيه", "أدخل كود المدير أولاً");
+            await db.collection('crm_users').doc(currentUser.uid).set({ managerId: newMgrId, status: 'pending' }, { merge: true });
+            showCustomToast("تم", "تم تحديث كود المدير وبانتظار الموافقة");
+            location.reload();
+        }
+
+        async function executeRoleSwitchTo(newRole) {
+            document.getElementById('switch-role-modal').classList.add('hidden');
+            let updateData = { role: newRole, status: 'approved' };
+            if (newRole === 'manager') updateData.managerId = null;
+            else updateData.managerId = userSavedManagerId || null;
+
+            await db.collection('crm_users').doc(currentUser.uid).set(updateData, { merge: true });
+            location.reload();
+        }
+
+        function promptSwitchRole() { document.getElementById('switch-role-modal').classList.remove('hidden'); }
+
+        function applyCrmRoleUI() {
+            document.getElementById('role-badge').innerText = crmRole === 'manager' ? 'مدير شركة' : 'مسؤول مبيعات';
+            const isManager = crmRole === 'manager';
+            document.getElementById('sidebar-excel-btn').classList.toggle('hidden', !isManager);
+            document.getElementById('manager-excel-archive-section').classList.toggle('hidden', !isManager);
+            document.getElementById('sidebar-stats-btn').classList.toggle('hidden', !isManager);
+            document.getElementById('sidebar-reports-btn').classList.toggle('hidden', !isManager);
+            document.getElementById('sidebar-team-btn').classList.toggle('hidden', !isManager);
+            document.getElementById('manager-add-lead-btn').classList.toggle('hidden', !isManager);
+            document.getElementById('manager-uid-display-card').classList.toggle('hidden', !isManager);
+            document.getElementById('sales-binding-settings-card').classList.toggle('hidden', isManager);
+            document.getElementById('manager-view-toggle-bar').classList.toggle('hidden', !isManager);
+        }
+
+        function copyManagerUid() {
+            navigator.clipboard.writeText(currentUser.uid);
+            showCustomToast("تم النسخ", "تم نسخ كود الـ UID الخاص بك");
+        }
+
+        function toggleTeamChatModal() {
+            const modal = document.getElementById('team-chat-modal');
+            if (!modal) return;
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                const container = document.getElementById('chat-messages-container');
+                if (container) container.scrollTop = container.scrollHeight;
+                const input = document.getElementById('chat-input-message');
+                if (input) input.focus();
+            }
+        }
+
+        async function sendTeamMessage() {
+            const input = document.getElementById('chat-input-message');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const teamManagerId = crmRole === 'manager' ? currentUser.uid : userSavedManagerId;
+            if (!teamManagerId) {
+                return showCustomToast("تنبيه", "يجب أن تكون مرتبطاً بمدير لتتمكن من مراسلة الفريق! أدخل كود المدير.");
+            }
+
+            try {
+                await db.collection('crm_team_chat').add({
+                    managerTeamId: teamManagerId,
+                    senderId: currentUser.uid,
+                    senderEmail: currentUser.email || 'مستخدم',
+                    message: text,
+                    timestamp: Date.now()
+                });
+                input.value = '';
+            } catch (e) {}
+        }
+
+        function loadTeamChatMessages() {
+            const teamManagerId = crmRole === 'manager' ? currentUser.uid : userSavedManagerId;
+            const container = document.getElementById('chat-messages-container');
+            
+            if (!teamManagerId) {
+                if(container) container.innerHTML = '<p class="text-center text-amber-400 py-4 text-xs">قم بربط حسابك بمدير لتتمكن من رؤية شات التيم.</p>';
+                return;
+            }
+
+            db.collection('crm_team_chat')
+              .where('managerTeamId', '==', teamManagerId)
+              .onSnapshot(snapshot => {
+                  if (!container) return;
+                  if (snapshot.empty) { 
+                      container.innerHTML = '<p class="text-center text-zinc-500 py-4">لا توجد رسائل في تيم العمل حتى الآن. ابدأ المحادثة.</p>'; 
+                      return; 
+                  }
+
+                  let messages = [];
+                  snapshot.forEach(doc => {
+                      messages.push({ id: doc.id, ...doc.data() });
+                  });
+
+                  messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+                  let html = '';
+                  messages.forEach(msg => {
+                      const isMe = msg.senderId === currentUser.uid;
+                      html += `
+                          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                              <span class="text-[9px] text-zinc-400 mb-0.5">${msg.senderEmail}</span>
+                              <div class="p-2.5 rounded-xl max-w-[85%] ${isMe ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-200'}">${msg.message}</div>
+                          </div>
+                      `;
+                  });
+                  container.innerHTML = html;
+                  container.scrollTop = container.scrollHeight;
+              }, error => {});
+        }
+
+        // تقارير واتساب الأسبوعية والشهرية
+        function openWhatsAppReportsModal() {
+            document.getElementById('whatsapp-reports-modal').classList.remove('hidden');
+            document.getElementById('whatsapp-preview-box').classList.add('hidden');
+        }
+        function closeWhatsAppReportsModal() { document.getElementById('whatsapp-reports-modal').classList.add('hidden'); }
+
+        function generateWhatsAppReport(period) {
+            const total = leadsData.length;
+            const newLeads = leadsData.filter(l => l.status === 'NEW').length;
+            const showing = leadsData.filter(l => l.status === 'SHOWING').length;
+            const closed = leadsData.filter(l => l.status === 'CLOSED').length;
+
+            const periodName = period === 'weekly' ? 'التقرير الأسبوعي' : 'التقرير الشهري';
+            
+            let reportText = `منصة أكارو العقارية - ${periodName}\n`;
+            reportText += `-----------------------------------\n`;
+            reportText += `إجمالي الأرقام والعملاء: ${total}\n`;
+            reportText += `العملاء الجدد: ${newLeads}\n`;
+            reportText += `المعاينات القائمة: ${showing}\n`;
+            reportText += `الصفقات المغلقة: ${closed}\n`;
+            reportText += `-----------------------------------\n`;
+            reportText += `تم استخراج هذا التقرير آلياً عبر نظام أكارو CRM.`;
+
+            document.getElementById('whatsapp-report-text').value = reportText;
+            const encodedText = encodeURIComponent(reportText);
+            document.getElementById('whatsapp-send-link').href = `https://wa.me/?text=${encodedText}`;
+            document.getElementById('whatsapp-preview-box').classList.remove('hidden');
+        }
+
+        async function checkPendingAgentsNotifications() {
+            if (crmRole !== 'manager') return;
+            try {
+                const snap = await db.collection('crm_users').where('managerId', '==', currentUser.uid).where('status', '==', 'pending').get();
+                const counter = document.getElementById('sidebar-pending-badge');
+                if (!snap.empty) {
+                    counter.innerText = snap.size;
+                    counter.classList.remove('hidden');
+                } else {
+                    counter.classList.add('hidden');
+                }
+            } catch (e) {}
+        }
+
+        async function loadTeamAgentsSilent() {
+            try {
+                let queryRef = db.collection('crm_users');
+                if (crmRole === 'manager') queryRef = queryRef.where('managerId', '==', currentUser.uid);
+                const snapshot = await queryRef.get();
+                const managerDoc = await db.collection('crm_users').doc(currentUser.uid).get();
+                const customNames = (managerDoc.exists && managerDoc.data().customNames) ? managerDoc.data().customNames : {};
+
+                teamAgents = [];
+                let pendingAgents = [];
+
+                teamAgents.push({ id: currentUser.uid, email: currentUser.email, nickname: customNames[currentUser.uid] || (crmRole === 'manager' ? 'أنا (مدير)' : currentUser.email) });
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (doc.id !== currentUser.uid) {
+                        const agentObj = {
+                            id: doc.id,
+                            email: data.email || 'مسؤول مبيعات',
+                            nickname: customNames[doc.id] || data.email || 'مسؤول مبيعات',
+                            status: data.status || 'pending'
+                        };
+                        if (data.status === 'approved') teamAgents.push(agentObj);
+                        else pendingAgents.push(agentObj);
+                    }
+                });
+
+                if (crmRole === 'manager') {
+                    renderTeamManagerModalLists(teamAgents, pendingAgents);
+                    checkPendingAgentsNotifications();
+                }
+            } catch (e) {}
+        }
+
+        async function openTeamManagerModal() {
+            await loadTeamAgentsSilent();
+            document.getElementById('team-manager-modal').classList.remove('hidden');
+        }
+        function closeTeamManagerModal() { document.getElementById('team-manager-modal').classList.add('hidden'); }
+
+        function renderTeamManagerModalLists(approved, pending) {
+            const pendingSec = document.getElementById('pending-agents-section');
+            const pendingList = document.getElementById('pending-agents-list');
+            if (pending.length > 0) {
+                pendingSec.classList.remove('hidden');
+                pendingList.innerHTML = pending.map(p => `
+                    <div class="bg-[#0d0d10] border border-amber-500/30 p-3 rounded-xl flex items-center justify-between">
+                        <div><h4 class="font-bold text-white text-xs">${p.email}</h4></div>
+                        <div class="flex gap-2">
+                            <button onclick="approveAgent('${p.id}')" class="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold">قبول</button>
+                            <button onclick="removeAgentBinding('${p.id}')" class="px-3 py-1 bg-red-600/20 text-red-400 rounded-lg text-xs">رفض</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else { pendingSec.classList.add('hidden'); }
+
+            const approvedList = document.getElementById('team-agents-list');
+            approvedList.innerHTML = approved.map(a => `
+                <div class="bg-[#0d0d10] border border-white/10 p-4 rounded-xl flex items-center justify-between gap-3 agent-item" data-name="${a.email.toLowerCase()}">
+                    <div><h4 class="font-bold text-white text-sm">${a.nickname}</h4></div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="editAgentNickname('${a.id}', '${a.nickname}')" class="px-3 py-1.5 bg-blue-600/20 text-blue-400 rounded-lg text-xs">تعديل الاسم</button>
+                        ${a.id !== currentUser.uid ? `<button onclick="removeAgentBinding('${a.id}')" class="px-3 py-1.5 bg-red-600/20 text-red-400 rounded-lg text-xs">فصل</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function approveAgent(agentId) {
+            await db.collection('crm_users').doc(agentId).update({ status: 'approved' });
+            showCustomToast("تم", "تم قبول عضو الفريق");
+            openTeamManagerModal();
+        }
+
+        async function removeAgentBinding(agentId) {
+            if (confirm("هل تريد فصل هذا المسؤول؟")) {
+                await db.collection('crm_users').doc(agentId).update({ managerId: null, status: 'pending' });
+                showCustomToast("تم", "تمت إزالة السيلز");
+                openTeamManagerModal();
+            }
+        }
+
+        async function editAgentNickname(agentId, currentNickname) {
+            const newName = prompt("اسم السيلز الجديد:", currentNickname);
+            if (!newName) return;
+            const managerRef = db.collection('crm_users').doc(currentUser.uid);
+            const doc = await managerRef.get();
+            let customNames = (doc.exists && doc.data().customNames) ? doc.data().customNames : {};
+            customNames[agentId] = newName;
+            await managerRef.set({ customNames }, { merge: true });
+            showCustomToast("تم", "تم التحديث");
+            openTeamManagerModal();
+        }
+
+        function filterTeamAgents() {
+            const query = document.getElementById('team-search-input').value.toLowerCase();
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.style.display = item.getAttribute('data-name').includes(query) ? 'flex' : 'none';
+            });
+        }
+
+        async function openDistributionModal() {
+            if (!currentSelectedFileId) return showCustomToast("تنبيه", "اختر ملفاً أولاً!");
+            await loadTeamAgentsSilent();
+            const validApprovedAgents = teamAgents.filter(a => a.id !== currentUser.uid);
+            const select = document.getElementById('target-sales-select');
+            select.innerHTML = validApprovedAgents.map(a => `<option value="${a.id}">${a.nickname} (${a.email})</option>`).join('');
+            document.getElementById('distribution-modal').classList.remove('hidden');
+        }
+        function closeDistributionModal() { document.getElementById('distribution-modal').classList.add('hidden'); }
+
+        document.querySelectorAll('input[name="dist_mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                document.getElementById('single-agent-select-box').classList.toggle('hidden', e.target.value !== 'single_agent');
+            });
+        });
+
+        async function executeAdvancedDistribution() {
+            const mode = document.querySelector('input[name="dist_mode"]:checked').value;
+            closeDistributionModal();
+            try {
+                const fileLeads = leadsData.filter(l => l.fileId === currentSelectedFileId && !l.hidden);
+                const batch = db.batch();
+                const validAgents = teamAgents.filter(a => a.id !== currentUser.uid);
+
+                if (mode === 'equal') {
+                    if (validAgents.length === 0) return showCustomToast("خطأ", "لا يوجد سيلز معتمدين!");
+                    let index = 0;
+                    fileLeads.forEach(lead => {
+                        const agentId = validAgents[index % validAgents.length].id;
+                        index++;
+                        batch.update(db.collection('crm_leads').doc(lead.id), { assignedTo: agentId, isPrivateManager: false });
+                    });
+                } else if (mode === 'single_agent') {
+                    const targetAgentId = document.getElementById('target-sales-select').value;
+                    fileLeads.forEach(lead => {
+                        batch.update(db.collection('crm_leads').doc(lead.id), { assignedTo: targetAgentId, isPrivateManager: false });
+                    });
+                }
+
+                await batch.commit();
+                showCustomToast("نجاح", "تم توزيع الملف بنجاح!");
+                loadLeads();
+            } catch (err) {}
+        }
+
+        function openFileOptionsModal() {
+            if (!currentSelectedFileId) return showCustomToast("تنبيه", "اختر ملفاً أولاً!");
+            document.getElementById('file-options-modal').classList.remove('hidden');
+        }
+        function closeFileOptionsModal() { document.getElementById('file-options-modal').classList.add('hidden'); }
+
+        async function executeFileOption(option) {
+            closeFileOptionsModal();
+            if (!currentSelectedFileId) return;
+            try {
+                if (option === 'DELETE_ALL') {
+                    const batch = db.batch();
+                    batch.delete(db.collection('crm_excel_files').doc(currentSelectedFileId));
+                    leadsData.filter(l => l.fileId === currentSelectedFileId).forEach(l => batch.delete(db.collection('crm_leads').doc(l.id)));
+                    await batch.commit();
+                    showCustomToast("تم", "تم الحذف نهائياً");
+                } else if (option === 'HIDE_ALL') {
+                    await db.collection('crm_excel_files').doc(currentSelectedFileId).update({ hidden: true });
+                    const batch = db.batch();
+                    leadsData.filter(l => l.fileId === currentSelectedFileId).forEach(l => batch.update(db.collection('crm_leads').doc(l.id), { hidden: true }));
+                    await batch.commit();
+                    showCustomToast("تم", "تم الإخفاء");
+                }
+                loadLeads();
+                loadExcelFilesArchive();
+            } catch (err) {}
+        }
+
+        function openExcelImportModal() { document.getElementById('excel-modal').classList.remove('hidden'); }
+        function closeExcelImportModal() { document.getElementById('excel-modal').classList.add('hidden'); }
+
+        function handleExcelFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('file-name-display').innerText = "تم اختيار: " + file.name;
+            if(!document.getElementById('excel-campaign-name').value) document.getElementById('excel-campaign-name').value = file.name.replace(/\.[^/.]+$/, "");
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                parsedExcelRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                showCustomToast("تم", `تم قراءة ${parsedExcelRows.length} صف.`);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function processAndUploadExcelFile() {
+            if (parsedExcelRows.length === 0) return showCustomToast("تنبيه", "اختر ملفاً أولاً!");
+            const campaignName = document.getElementById('excel-campaign-name').value.trim() || "ملف إكسيل";
+            try {
+                const fileRef = await db.collection('crm_excel_files').add({
+                    managerId: currentUser.uid,
+                    fileName: campaignName,
+                    leadsCount: parsedExcelRows.length,
+                    hidden: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                const batch = db.batch();
+                parsedExcelRows.forEach(row => {
+                    const keys = Object.keys(row);
+                    let name = '', phone = '', property = campaignName, budget = null;
+                    keys.forEach(k => {
+                        const lk = k.toLowerCase();
+                        const val = row[k];
+                        if (lk.includes('name') || lk.includes('اسم')) name = val;
+                        if (lk.includes('phone') || lk.includes('mobile') || lk.includes('هاتف') || lk.includes('رقم')) phone = val;
+                        if (lk.includes('property') || lk.includes('عقار')) property = val;
+                        if (lk.includes('budget') || lk.includes('ميزانية')) budget = val;
+                    });
+                    if (!name && keys.length > 0) name = row[keys[0]];
+                    if (!phone && keys.length > 1) phone = row[keys[1]];
+
+                    if (phone) {
+                        const ref = db.collection('crm_leads').doc();
+                        batch.set(ref, {
+                            fileId: fileRef.id,
+                            fileTitle: campaignName,
+                            name: String(name || 'عميل'),
+                            phone: String(phone),
+                            property: String(property || 'عقار'),
+                            budget: budget ? Number(budget) : null,
+                            status: 'NEW',
+                            lastCallNote: '',
+                            nextFollowUp: '',
+                            commPhone: false,
+                            commWhatsapp: false,
+                            assignedTo: currentUser.uid,
+                            isPrivateManager: false,
+                            hidden: false,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                });
+
+                await batch.commit();
+                closeExcelImportModal();
+                showCustomToast("نجاح", "تم رفع الملف بنجاح!");
+                loadExcelFilesArchive();
+                loadLeads();
+            } catch (err) {}
+        }
+
+        async function loadExcelFilesArchive() {
+            if (crmRole !== 'manager') return;
+            const container = document.getElementById('excel-files-grid');
+            try {
+                const snapshot = await db.collection('crm_excel_files').where('managerId', '==', currentUser.uid).get();
+                let html = '';
+                let visibleCount = 0;
+                snapshot.forEach(doc => {
+                    const file = doc.data();
+                    if (!file.hidden) {
+                        visibleCount++;
+                        html += `
+                            <div onclick="filterLeadsByFile('${doc.id}', '${file.fileName}')" class="bg-zinc-900 border border-white/10 hover:border-blue-500 p-4 rounded-xl cursor-pointer transition shadow-md">
+                                <div class="flex items-center justify-between mb-2"><i class="fa-solid fa-file-excel text-blue-400 text-xl"></i><span class="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold">${file.leadsCount || 0} رقم</span></div>
+                                <h4 class="font-bold text-white text-sm truncate">${file.fileName}</h4>
+                            </div>
+                        `;
+                    }
+                });
+                container.innerHTML = visibleCount > 0 ? html : '<p class="text-xs text-zinc-500">لا توجد ملفات مرفوعة.</p>';
+            } catch (e) {}
+        }
+
+        function filterLeadsByFile(fileId, fileName) {
+            currentSelectedFileId = fileId;
+            currentSelectedFileName = fileName;
+            document.getElementById('table-title').innerText = `أرقام ملف: ${fileName}`;
+            if (crmRole === 'manager') {
+                document.getElementById('distribute-file-btn').classList.remove('hidden');
+                document.getElementById('file-options-btn').classList.remove('hidden');
+            }
+            const filtered = leadsData.filter(l => l.fileId === fileId && !l.hidden);
+            currentPage = 1;
+            renderResponsiveCards(filtered);
+        }
+
+        function switchManagerView(mode) {
+            managerCurrentViewMode = mode;
+            const btnAll = document.getElementById('btn-view-all');
+            const btnPriv = document.getElementById('btn-view-private');
+            if (mode === 'all') {
+                btnAll.className = "px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white transition shadow-md shrink-0";
+                btnPriv.className = "px-4 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-300 hover:text-white transition shrink-0";
+                document.getElementById('table-title').innerText = 'جميع أرقام وداتا فريق المبيعات';
+            } else {
+                btnPriv.className = "px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white transition shadow-md shrink-0";
+                btnAll.className = "px-4 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-300 hover:text-white transition shrink-0";
+                document.getElementById('table-title').innerText = 'فايل المدير الخاص بي';
+            }
+            currentPage = 1;
+            renderResponsiveCards(leadsData);
+        }
+
+        function loadLeads() {
+            currentSelectedFileId = null;
+            document.getElementById('distribute-file-btn').classList.add('hidden');
+            document.getElementById('file-options-btn').classList.add('hidden');
+            
+            db.collection('crm_leads').onSnapshot(snapshot => {
+                leadsData = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (!data.hidden) leadsData.push({ id: doc.id, ...data });
+                });
+                currentPage = 1;
+                renderResponsiveCards(leadsData);
+                updateStats();
+            });
+        }
+
+        function renderResponsiveCards(leads) {
+            let filtered = [];
+            if (crmRole === 'manager') {
+                filtered = managerCurrentViewMode === 'my_private' ? leads.filter(l => l.isPrivateManager === true) : leads;
+            } else {
+                filtered = leads.filter(l => l.assignedTo === currentUser.uid || (!l.assignedTo && !l.isPrivateManager));
+            }
+
+            const totalPages = Math.ceil(filtered.length / rowsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const paginatedItems = filtered.slice(start, start + rowsPerPage);
+            const container = document.getElementById('leads-cards-container');
+
+            if (paginatedItems.length === 0) {
+                container.innerHTML = `<div class="col-span-full p-8 text-center text-zinc-500">لا توجد أرقام مسجلة.</div>`;
+            } else {
+                container.innerHTML = paginatedItems.map(l => {
+                    const isAssignedToMe = l.assignedTo === currentUser.uid;
+                    const assignedAgentName = teamAgents.find(a => a.id === l.assignedTo)?.nickname || 'سيلز آخر';
+                    const isLockedByOther = crmRole !== 'manager' && l.assignedTo && l.assignedTo !== currentUser.uid;
+
+                    return `
+                        <div class="glass-card p-5 border ${l.isPrivateManager ? 'border-purple-500/40 bg-purple-950/10' : (isAssignedToMe ? 'border-blue-500/40 bg-blue-950/10' : 'border-white/10')} flex flex-col justify-between gap-4 shadow-lg relative">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <h4 class="font-black text-white text-base">${l.name || 'عميل'} ${l.isPrivateManager ? '<span class="text-[10px] bg-purple-500/25 text-purple-300 px-2 py-0.5 rounded-full font-bold mr-1">خاص</span>' : ''}</h4>
+                                    <p class="text-xs text-amber-400 font-mono mt-0.5" dir="ltr"><i class="fa-solid fa-phone ml-1"></i> ${l.phone || 'بدون هاتف'}</p>
+                                </div>
+                                <span class="status-badge status-${(l.status || 'new').toLowerCase()} shrink-0">${l.status || 'NEW'}</span>
+                            </div>
+
+                            <div class="bg-zinc-900/80 p-2.5 rounded-xl border border-white/5 text-[11px] space-y-1">
+                                ${crmRole === 'manager' && !l.isPrivateManager ? `<p class="text-purple-300 font-bold"><i class="fa-solid fa-user-tie ml-1"></i> المسؤول: <span class="text-white">${assignedAgentName}</span></p>` : ''}
+                                ${isLockedByOther ? `<p class="text-red-400 font-bold"><i class="fa-solid fa-lock ml-1"></i> مقفول بواسطة: <span class="text-white">${assignedAgentName}</span></p>` : ''}
+                                ${l.property ? `<p class="text-zinc-300"><i class="fa-solid fa-building ml-1"></i> العقار: <span class="text-white font-bold">${l.property}</span></p>` : ''}
+                                ${l.budget ? `<p class="text-zinc-300"><i class="fa-solid fa-wallet ml-1"></i> الميزانية: <span class="text-amber-400 font-bold">${Number(l.budget).toLocaleString()} ج.م</span></p>` : ''}
+                                ${l.nextFollowUp ? `<p class="text-amber-300 font-mono"><i class="fa-solid fa-clock ml-1"></i> التذكير: ${l.nextFollowUp.replace('T', ' ')}</p>` : ''}
+                            </div>
+
+                            <div class="bg-blue-950/20 p-3 rounded-xl border border-blue-500/20 text-xs space-y-2">
+                                <div>
+                                    <span class="font-bold block text-blue-400 mb-0.5"><i class="fa-solid fa-phone-volume ml-1"></i> آخر مكالمة:</span>
+                                    <p class="text-zinc-300 leading-relaxed">${l.lastCallNote || 'لا توجد ملاحظات.'}</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between pt-2 border-t border-white/10 gap-2">
+                                <div class="flex items-center gap-1.5">
+                                    <a href="tel:${l.phone}" onclick="markCommStatus('${l.id}', 'phone')" class="px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white text-xs font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-phone"></i> اتصال</a>
+                                    <a href="https://wa.me/2${l.phone}" target="_blank" onclick="markCommStatus('${l.id}', 'whatsapp')" class="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-white text-xs font-bold transition flex items-center gap-1.5"><i class="fa-brands fa-whatsapp"></i> واتساب</a>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    ${!isLockedByOther || crmRole === 'manager' ? `<button onclick="openEditLeadModal('${l.id}')" class="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"><i class="fa-solid fa-pen"></i> مكالمة</button>` : ''}
+                                    ${crmRole === 'manager' ? `<button onclick="deleteLead('${l.id}')" class="w-9 h-9 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 flex items-center justify-center transition"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            document.getElementById('page-indicator').innerText = `الصفحة ${currentPage} من ${totalPages}`;
+            document.getElementById('prev-page-btn').disabled = currentPage === 1;
+            document.getElementById('next-page-btn').disabled = currentPage === totalPages;
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            renderResponsiveCards(leadsData);
+            window.scrollTo({ top: 200, behavior: 'smooth' });
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total').innerText = leadsData.length;
+            document.getElementById('stat-new').innerText = leadsData.filter(l => l.status === 'NEW').length;
+            document.getElementById('stat-showing').innerText = leadsData.filter(l => l.status === 'SHOWING').length;
+            document.getElementById('stat-closed').innerText = leadsData.filter(l => l.status === 'CLOSED').length;
+        }
+
+        async function markCommStatus(leadId, type) {
+            const updateField = type === 'phone' ? { commPhone: true } : { commWhatsapp: true };
+            const lead = leadsData.find(l => l.id === leadId);
+            if (lead && crmRole !== 'manager' && !lead.assignedTo) updateField.assignedTo = currentUser.uid;
+            await db.collection('crm_leads').doc(leadId).update(updateField);
+        }
+
+        function toggleDestSelect() {
+            const destType = document.querySelector('input[name="lead_dest_type"]:checked').value;
+            document.getElementById('specific-agent-box').classList.toggle('hidden', destType !== 'specific_agent');
+        }
+
+        async function saveLead(e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-lead-id').value;
+            const destType = crmRole === 'manager' ? document.querySelector('input[name="lead_dest_type"]:checked').value : 'my_sales';
+
+            let assignedToVal = currentUser.uid;
+            let isPrivateManagerVal = false;
+
+            if (crmRole === 'manager') {
+                if (destType === 'private_manager') { isPrivateManagerVal = true; assignedToVal = currentUser.uid; }
+                else if (destType === 'specific_agent') { assignedToVal = document.getElementById('target-sales-dropdown').value; isPrivateManagerVal = false; }
+                else if (destType === 'all_sales') { assignedToVal = null; isPrivateManagerVal = false; }
+            }
+
+            const leadData = {
+                name: document.getElementById('lead-name').value,
+                phone: document.getElementById('lead-phone').value,
+                property: document.getElementById('lead-property').value,
+                budget: document.getElementById('lead-budget').value ? Number(document.getElementById('lead-budget').value) : null,
+                status: document.getElementById('lead-status').value,
+                lastCallNote: document.getElementById('lead-last-call-note').value.trim(),
+                nextFollowUp: document.getElementById('lead-next-followup').value,
+                commPhone: document.getElementById('comm-phone').checked,
+                commWhatsapp: document.getElementById('comm-whatsapp').checked,
+                assignedTo: assignedToVal,
+                isPrivateManager: isPrivateManagerVal
+            };
+
+            if (editId) {
+                await db.collection('crm_leads').doc(editId).update(leadData);
+                showCustomToast("تم بنجاح", "تم تحديث العميل");
+            } else {
+                leadData.hidden = false;
+                leadData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                await db.collection('crm_leads').add(leadData);
+                showCustomToast("تم", "تم إضافة الرقم");
+            }
+            closeLeadModal();
+        }
+
+        async function openAddLeadModal() {
+            if (crmRole !== 'manager') return showCustomToast("تنبيه", "مخصص للمدير فقط.");
+            document.getElementById('lead-form').reset();
+            document.getElementById('edit-lead-id').value = '';
+            document.getElementById('lead-modal-title').innerText = 'إضافة رقم جديد';
+            
+            await loadTeamAgentsSilent();
+            const select = document.getElementById('target-sales-dropdown');
+            select.innerHTML = teamAgents.filter(a => a.id !== currentUser.uid).map(a => `<option value="${a.id}">${a.nickname}</option>`).join('');
+            document.getElementById('specific-agent-box').classList.add('hidden');
+            document.getElementById('lead-modal').classList.remove('hidden');
+        }
+
+        async function openEditLeadModal(id) {
+            const lead = leadsData.find(l => l.id === id);
+            if (!lead) return;
+            document.getElementById('edit-lead-id').value = lead.id;
+            document.getElementById('lead-name').value = lead.name || '';
+            document.getElementById('lead-phone').value = lead.phone || '';
+            document.getElementById('lead-property').value = lead.property || '';
+            document.getElementById('lead-budget').value = lead.budget || '';
+            document.getElementById('lead-status').value = lead.status || 'NEW';
+            document.getElementById('lead-last-call-note').value = lead.lastCallNote || '';
+            document.getElementById('lead-next-followup').value = lead.nextFollowUp || '';
+            document.getElementById('comm-phone').checked = lead.commPhone || false;
+            document.getElementById('comm-whatsapp').checked = lead.commWhatsapp || false;
+            
+            const destBox = document.querySelector('input[name="lead_dest_type"]').closest('.p-4');
+            if (crmRole === 'manager') {
+                destBox.style.display = 'block';
+                if (lead.isPrivateManager) document.querySelector('input[name="lead_dest_type"][value="private_manager"]').checked = true;
+                else if (lead.assignedTo) document.querySelector('input[name="lead_dest_type"][value="specific_agent"]').checked = true;
+                else document.querySelector('input[name="lead_dest_type"][value="all_sales"]').checked = true;
+                toggleDestSelect();
+            } else {
+                destBox.style.display = 'none';
+                if (!lead.assignedTo) await db.collection('crm_leads').doc(id).update({ assignedTo: currentUser.uid });
+            }
+
+            document.getElementById('lead-modal-title').innerText = 'تسجيل مكالمة';
+            document.getElementById('lead-modal').classList.remove('hidden');
+        }
+
+        async function deleteLead(id) {
+            if (confirm("هل تريد الحذف؟")) {
+                await db.collection('crm_leads').doc(id).delete();
+                showCustomToast("تم", "تم الحذف");
+            }
+        }
+        function closeLeadModal() { document.getElementById('lead-modal').classList.add('hidden'); }
+
+        async function openAnalyticsTabModal() {
+            await loadTeamAgentsSilent();
+            document.getElementById('analytics-tab-modal').classList.remove('hidden');
+            renderLeaderboard();
+        }
+        function closeAnalyticsTabModal() { document.getElementById('analytics-tab-modal').classList.add('hidden'); }
+
+        function renderLeaderboard() {
+            const container = document.getElementById('analytics-leaderboard-list');
+            if (teamAgents.length === 0) { container.innerHTML = '<p class="text-xs text-zinc-500">لا يوجد فريق.</p>'; return; }
+            let stats = teamAgents.map(agent => {
+                const agentLeads = leadsData.filter(l => l.assignedTo === agent.id && !l.isPrivateManager);
+                const closed = agentLeads.filter(l => l.status === 'CLOSED').length;
+                const total = agentLeads.length;
+                return { ...agent, closed, total };
+            });
+            stats.sort((a, b) => b.closed - a.closed || b.total - a.total);
+            let html = '';
+            stats.forEach((st, idx) => {
+                html += `
+                    <div class="bg-[#0d0d10] border border-white/10 p-4 rounded-xl flex items-center justify-between">
+                        <div><h4 class="font-bold text-white text-sm">${st.nickname}</h4><p class="text-[10px] text-zinc-400">الإجمالي: ${st.total}</p></div>
+                        <span class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs font-bold">${st.closed} مقفلة</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

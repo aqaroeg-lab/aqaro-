@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكارو | منصة العقارات والريلز العقارية الذكية</title>
+    <meta name="google-site-verification" content="hQUb85pOTm1GYc1WLU_zJly2LA5MJim2GcbOPBWrbUk" />
+    <meta name="description" content="منصة أكارو العقارية - ابحث عن عقارك، شقتك، أو وحدتك السكنية بكل سهولة. استعرض الإعلانات والريلز العقارية وتواصل مباشرة مع المالك أو الوسيط.">
+    <meta name="keywords" content="أكارو, عقارات مصر, بيع وشراء شقق, تسويق عقاري, منصة عقارية, ريلز عقارات, شقق للبيع, عقارات للإيجار">
+    <meta name="author" content="Aqaro Smart Platform">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.aqaro-eg.workers.dev/">
+    <meta property="og:title" content="أكارو | منصة العقارات والريلز العقارية الذكية">
+    <meta property="og:description" content="تصفح أفضل العقارات والوحدات السكنية في مصر، وشاهد الريلز العقارية بكل سهولة عبر منصة أكارو.">
+    <meta property="og:image" content="https://i.ibb.co/fdnhVgjt/Picsart-26-10-01-00-34-44-917.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        body { font-family:'Cairo',sans-serif; background:#0d0d0d; color:white; margin:0; overflow-x:hidden; }
+        #main-display { min-height:100vh; padding-bottom:90px; width:100%; }
+        nav#dynamic-nav {
+            background:#1a1a1a; height:75px; position:fixed; bottom:0; width:100%;
+            display:flex; justify-content:space-between; align-items:center;
+            border-top:1px solid #333; z-index:9999; padding:0 10px;
+            box-sizing:border-box; transition:transform .25s ease, opacity .25s ease;
+            will-change:transform;
+        }
+        nav#dynamic-nav.reels-nav-hidden { transform:translateY(110%); opacity:0; pointer-events:none; }
+        body.reels-page-active { overflow:hidden; }
+        body.reels-page-active #main-display {
+            height:100dvh; min-height:0; padding:0 !important; margin:0 !important;
+            max-width:none !important; overflow:hidden;
+        }
+        body.reels-page-active footer { display:none !important; }
+        .nav-link { color:#666; text-align:center; font-size:10px; cursor:pointer; transition:.3s; flex:1; }
+        .nav-link i { font-size:18px; margin-bottom:4px; display:block; }
+        .nav-link.active { color:#ef4444 !important; font-weight:bold; }
+        .special-sell-btn {
+            background:#ef4444; width:52px; height:52px; border-radius:50%;
+            transform:translateY(-15px); display:flex; align-items:center; justify-content:center;
+            border:4px solid #1a1a1a; box-shadow:0 4px 15px rgba(239,68,68,.3);
+            color:white; cursor:pointer; flex-shrink:0; margin:0 5px;
+        }
+        @media (min-width:768px) {
+            nav#dynamic-nav { display:none !important; }
+            #main-display { padding-bottom:0; padding-top:100px; max-width:1280px; margin:0 auto; min-height:calc(100vh - 250px); }
+            body.reels-page-active #main-display { padding:0 !important; padding-top:0 !important; height:100dvh; }
+        }
+    </style>
+</head>
+<body class="bg-[#0d0d0d]">
+    <div id="splash-screen" class="fixed inset-0 bg-[#0d0d0d] z-[999999] flex flex-col items-center justify-between py-12 px-6 transition-opacity duration-700 ease-in-out">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-600/25 rounded-full blur-[120px] pointer-events-none"></div>
+        <div class="flex-1 flex flex-col items-center justify-center z-10 space-y-6">
+            <div class="relative flex items-center justify-center">
+                <div class="w-28 h-28 bg-[#1a1a1a] border-2 border-red-500/40 rounded-3xl p-2 flex items-center justify-center shadow-[0_0_50px_rgba(239,68,68,0.4)] animate-pulse overflow-hidden">
+                    <img src="https://i.ibb.co/fdnhVgjt/Picsart-26-10-01-00-34-44-917.png" alt="أكارو" class="w-full h-full object-cover rounded-2xl">
+                </div>
+            </div>
+            <div class="flex items-center gap-2 pt-4">
+                <div class="w-3 h-3 bg-red-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div class="w-3 h-3 bg-red-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div class="w-3 h-3 bg-red-500 rounded-full animate-bounce"></div>
+            </div>
+        </div>
+        <div class="z-10 text-center"><h3 class="text-xs font-black tracking-widest text-zinc-300 uppercase drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]">Aqaro Smart Platform</h3></div>
+    </div>
+
+    <div id="maintenance-overlay" class="hidden fixed inset-0 bg-black/95 z-[99999] flex flex-col items-center justify-center p-6 text-center">
+        <div class="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mb-4 text-red-500 text-3xl"><i class="fa-solid fa-wrench animate-bounce"></i></div>
+        <h2 class="text-2xl font-black text-white mb-2">الموقع في حالة صيانة</h2>
+        <p class="text-gray-400 text-xs max-w-xs leading-relaxed">نقوم بإجراء بعض التحديثات والتحسينات حالياً لتوفير تجربة أفضل. يرجى العودة لاحقاً.</p>
+    </div>
+
+    <header class="hidden md:flex fixed top-0 w-full h-[85px] bg-[#1a1a1a]/95 backdrop-blur-md border-b border-[#333] z-[9999] px-10 items-center justify-between shadow-lg">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="loadPage('home')">
+            <img src="https://i.ibb.co/fdnhVgjt/Picsart-26-10-01-00-34-44-917.png" class="w-12 h-12 rounded-xl object-cover" alt="أكارو">
+            <h1 class="text-2xl font-black text-white tracking-wide">أكارو</h1>
+        </div>
+        <div class="flex-1 max-w-2xl mx-12">
+            <div class="relative flex items-center w-full h-12 rounded-full bg-[#0d0d0d] border border-[#333] pl-2 pr-4 overflow-hidden focus-within:border-red-500 transition-colors">
+                <i class="fa-solid fa-magnifying-glass text-gray-500 ml-3"></i>
+                <input type="text" placeholder="ابحث عن مدينة، حي، أو نوع عقار..." class="w-full bg-transparent border-none outline-none text-sm text-white placeholder-gray-500 h-full">
+                <button class="bg-red-500 text-white px-8 h-10 my-1 font-bold text-sm hover:bg-red-600 transition rounded-full mr-2">بحث</button>
+            </div>
+        </div>
+        <div class="flex items-center gap-6" id="desktop-nav-actions"></div>
+    </header>
+
+    <div id="main-display"></div>
+    <nav id="dynamic-nav"></nav>
+
+    <footer class="hidden md:block bg-[#1a1a1a] border-t border-[#333] pt-14 pb-8 mt-16">
+        <div class="max-w-7xl mx-auto px-10 grid grid-cols-4 gap-8">
+            <div class="col-span-2">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://i.ibb.co/fdnhVgjt/Picsart-26-10-01-00-34-44-917.png" class="w-15 h-15 rounded-lg" alt="أكارو">
+                    <h2 class="text-xl font-black text-white">أكارو</h2>
+                </div>
+                <p class="text-sm text-gray-400 leading-relaxed max-w-md">أكارو هي المنصة الذكية الأولى في مصر المصممة لتسهيل بيع وشراء وتأجير العقارات، مع توفير تجربة مشاهدة الريلز العقارية الحديثة.</p>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-5">روابط هامة</h4>
+                <ul class="space-y-3 text-sm text-gray-400">
+                    <li><a href="about.html" class="hover:text-red-500 transition">من نحن</a></li>
+                    <li><a href="jobs.html" class="hover:text-red-500 transition">الوظائف</a></li>
+                    <li><a href="privacy.html" class="hover:text-red-500 transition">سياسة الخصوصية</a></li>
+                    <li><a href="terms.html" class="hover:text-red-500 transition">شروط الاستخدام</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-5">تواصل معنا</h4>
+                <div class="flex gap-4 text-gray-400 text-2xl">
+                    <a href="https://www.facebook.com/share/17qwxHkKuC/" target="_blank" rel="noopener noreferrer" class="hover:text-blue-500 transition" title="فيسبوك"><i class="fa-brands fa-facebook"></i></a>
+                    <a href="https://instagram.com/aqaro_eg?stkn=MWgwbGp0dzE4bXRkeQ%3D%3D" target="_blank" rel="noopener noreferrer" class="hover:text-pink-500 transition" title="إنستجرام"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="https://whatsapp.com/channel/0029Vb7nbkPLdQeUBqJ0qW29" target="_blank" rel="noopener noreferrer" class="hover:text-green-500 transition" title="قناة الواتساب"><i class="fa-brands fa-whatsapp"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="text-center text-xs text-gray-600 mt-12 border-t border-[#333] pt-6">© 2026 منصة أكارو العقارية. جميع الحقوق محفوظة.</div>
+    </footer>
+
+    <script>
+        window.appState = { user:null, userData:null, role:'buyer', isBroker:false, isCompany:false };
+
+        const incomingURL = new URL(window.location.href);
+        window.__sharedReelId = (incomingURL.searchParams.get('video') || '').trim() || null;
+
+        function getInitialPage() {
+            if (window.__sharedReelId) return 'reels';
+            const hashPage = window.location.hash.replace(/^#/, '');
+            return hashPage || 'home';
+        }
+
+        if (sessionStorage.getItem('splash_shown') === 'true') {
+            const splashEl = document.getElementById('splash-screen');
+            if (splashEl) splashEl.style.display = 'none';
+        } else {
+            document.body.classList.add('overflow-hidden');
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+            authDomain: "youssef-4170d.firebaseapp.com",
+            projectId: "youssef-4170d",
+            storageBucket: "youssef-4170d.appspot.com",
+            appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        window.db = firebase.firestore();
+        window.auth = firebase.auth();
+        const db = window.db;
+        const auth = window.auth;
+
+        window.supabaseClient = supabase.createClient(
+            'https://lviwhlekdekvyevknopr.supabase.co',
+            'sb_publishable_l5yoWx8KXsLobZqrW33Fqg_Lq9jz8EC'
+        );
+
+        let isInitialLoadDone = false;
+        let userDataUnsubscribe = null;
+        let maintenanceUnsubscribe = null;
+
+        function hideSplashScreen() {
+            const splash = document.getElementById('splash-screen');
+            if (splash && splash.style.display !== 'none') {
+                splash.classList.add('opacity-0','pointer-events-none');
+                document.body.classList.remove('overflow-hidden');
+                sessionStorage.setItem('splash_shown','true');
+                setTimeout(() => { splash.style.display = 'none'; },700);
+            }
+        }
+
+        function checkMaintenanceMode() {
+            if (maintenanceUnsubscribe) maintenanceUnsubscribe();
+            maintenanceUnsubscribe = db.collection('settings').doc('system').onSnapshot(doc => {
+                const overlay = document.getElementById('maintenance-overlay');
+                if (!overlay) return;
+                overlay.classList.toggle('hidden', !(doc.exists && doc.data().maintenance === true));
+            }, () => {});
+        }
+
+        function logUserActivity(pageName) {
+            try {
+                const user = auth.currentUser;
+                const activityData = {
+                    page:pageName,
+                    timestamp:firebase.firestore.FieldValue.serverTimestamp(),
+                    userAgent:navigator.userAgent,
+                    userId:user ? user.uid : 'guest_visitor'
+                };
+                db.collection('activity_logs').add(activityData).catch(() => {});
+                if (user) db.collection('users').doc(user.uid).set({
+                    last_active_page:pageName,
+                    last_seen:firebase.firestore.FieldValue.serverTimestamp()
+                },{merge:true}).catch(() => {});
+            } catch(e) { console.error("خطأ في تسجيل النشاط:",e); }
+        }
+
+        function fetchAndSyncUserData(uid) {
+            if (userDataUnsubscribe) userDataUnsubscribe();
+            userDataUnsubscribe = db.collection('users').doc(uid).onSnapshot(doc => {
+                if (doc.exists) {
+                    const userData = doc.data();
+                    localStorage.setItem('userData',JSON.stringify(userData));
+                    window.appState.userData = userData;
+                    const isCompanyApproved = userData.isCompany === true ||
+                        userData.role === 'company' || userData.role === 'owner' ||
+                        userData.accountType === 'company';
+                    const isBroker = userData.role === 'broker' || userData.role === 'company' ||
+                        userData.role === 'owner' || isCompanyApproved;
+                    window.appState.isCompany = isCompanyApproved;
+                    window.appState.isBroker = isBroker;
+                    window.appState.role = userData.role || (isBroker ? 'broker' : 'buyer');
+                    renderNav(window.appState.role);
+                    if (typeof window.updateUIBasedOnRole === 'function') window.updateUIBasedOnRole();
+                } else {
+                    window.appState.userData = null;
+                    window.appState.role = 'buyer';
+                    window.appState.isBroker = false;
+                    window.appState.isCompany = false;
+                    renderNav('buyer');
+                }
+            },error => {
+                console.error('تعذر مزامنة بيانات المستخدم:',error);
+                renderNav('buyer');
+            });
+        }
+
+        function updateNavActiveState() {
+            if (!window.currentLoadedPage) return;
+            document.querySelectorAll('.nav-link,.special-sell-btn').forEach(link => link.classList.remove('active'));
+            const activeBtn = document.getElementById('n-' + window.currentLoadedPage);
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+
+        function renderNav(role) {
+            const navBar = document.getElementById('dynamic-nav');
+            const desktopNav = document.getElementById('desktop-nav-actions');
+            if (!navBar) return;
+            const isPublisher = window.appState.isBroker || ['broker','seller','owner','admin'].includes(role);
+            let mobileHTML = '';
+            let desktopHTML = '';
+
+            if (isPublisher) {
+                mobileHTML = `
+                    <div onclick="loadPage('home')" id="n-home" class="nav-link"><i class="fa-solid fa-house"></i>الرئيسية</div>
+                    <div onclick="loadPage('chat')" id="n-chat" class="nav-link"><i class="fa-solid fa-comment-dots"></i>الدردشة</div>
+                    <div onclick="loadPage('sell')" id="n-sell" class="special-sell-btn"><i class="fa-solid fa-plus text-base"></i></div>
+                    <div onclick="loadPage('premium')" id="n-premium" class="nav-link"><i class="fa-solid fa-hammer"></i>البريميري</div>
+                    <div onclick="loadPage('profile')" id="n-profile" class="nav-link"><i class="fa-solid fa-user"></i>حسابي</div>`;
+                desktopHTML = `
+                    <div onclick="loadPage('chat')" class="w-10 h-10 flex items-center justify-center rounded-full bg-[#333] hover:bg-red-500 cursor-pointer transition text-gray-300 hover:text-white" title="الدردشة"><i class="fa-solid fa-comment-dots"></i></div>
+                    <div onclick="loadPage('premium')" class="w-10 h-10 flex items-center justify-center rounded-full bg-[#333] hover:bg-red-500 cursor-pointer transition text-gray-300 hover:text-white" title="البريميري"><i class="fa-solid fa-hammer"></i></div>
+                    <div onclick="loadPage('profile')" class="w-10 h-10 flex items-center justify-center rounded-full bg-[#333] hover:bg-red-500 cursor-pointer transition text-gray-300 hover:text-white" title="حسابي"><i class="fa-solid fa-user"></i></div>
+                    <button onclick="loadPage('sell')" class="bg-red-500 text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 hover:bg-red-600 transition shadow-[0_0_15px_rgba(239,68,68,0.3)]"><i class="fa-solid fa-plus"></i> أضف إعلانك</button>`;
+            } else {
+                mobileHTML = `
+                    <div onclick="loadPage('home')" id="n-home" class="nav-link"><i class="fa-solid fa-house"></i>الرئيسية</div>
+                    <div onclick="loadPage('chat')" id="n-chat" class="nav-link"><i class="fa-solid fa-comment-dots"></i>الدردشة</div>
+                    <div onclick="loadPage('reels')" id="n-reels" class="nav-link"><i class="fa-solid fa-clapperboard"></i>الريلز</div>
+                    <div onclick="loadPage('premium')" id="n-premium" class="nav-link"><i class="fa-solid fa-hammer"></i>البريميري</div>
+                    <div onclick="loadPage('profile')" id="n-profile" class="nav-link"><i class="fa-solid fa-user"></i>حسابي</div>`;
+                desktopHTML = `
+                    <div onclick="loadPage('reels')" class="w-10 h-10 flex items-center justify-center rounded-full bg-[#333] hover:bg-red-500 cursor-pointer transition text-gray-300 hover:text-white" title="الريلز"><i class="fa-solid fa-clapperboard"></i></div>
+                    <div onclick="loadPage('chat')" class="w-10 h-10 flex items-center justify-center rounded-full bg-[#333] hover:bg-red-500 cursor-pointer transition text-gray-300 hover:text-white" title="الدردشة"><i class="fa-solid fa-comment-dots"></i></div>
+                    <div onclick="loadPage('premium')" class="w-10 h-10 flex items-center justify-center rounded-full bg-[#333] hover:bg-red-500 cursor-pointer transition text-gray-300 hover:text-white" title="البريميري"><i class="fa-solid fa-hammer"></i></div>
+                    <div onclick="loadPage('profile')" class="w-10 h-10 flex items-center justify-center rounded-full bg-[#333] hover:bg-red-500 cursor-pointer transition text-gray-300 hover:text-white" title="حسابي"><i class="fa-solid fa-user"></i></div>`;
+            }
+            navBar.innerHTML = mobileHTML;
+            if (desktopNav) desktopNav.innerHTML = desktopHTML;
+            updateNavActiveState();
+        }
+
+        async function runInjectedScripts(container) {
+            document.querySelectorAll('.app-injected-script').forEach(script => script.remove());
+            const scripts = Array.from(container.querySelectorAll('script'));
+            for (const oldScript of scripts) {
+                const newScript = document.createElement('script');
+                newScript.classList.add('app-injected-script');
+                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name,attr.value));
+                if (oldScript.src) {
+                    await new Promise(resolve => {
+                        newScript.src = oldScript.src;
+                        newScript.onload = resolve;
+                        newScript.onerror = resolve;
+                        document.body.appendChild(newScript);
+                    });
+                } else {
+                    let code = oldScript.textContent;
+                    code = code.replace(
+                        /document\.addEventListener\s*\(\s*['"]DOMContentLoaded['"]\s*,\s*(async\s*)?(\([^)]*\)|[a-zA-Z0-9_]+)\s*=>\s*\{/g,
+                        '(async () => {'
+                    );
+                    code = code.replace(
+                        /document\.addEventListener\s*\(\s*['"]DOMContentLoaded['"]\s*,\s*function\s*\([^)]*\)\s*\{/g,
+                        '(async function() {'
+                    );
+                    code = code.replace(
+                        /window\.onload\s*=\s*(async\s*)?function\s*\([^)]*\)\s*\{/g,
+                        '(async function() {'
+                    );
+                    newScript.textContent = ` (async () => { try { ${code} } catch (err) { console.error("خطأ:",err); } })(); `;
+                    document.body.appendChild(newScript);
+                }
+                oldScript.remove();
+            }
+        }
+
+        async function loadPage(page,pushToHistory=true) {
+            if (!page) page = 'home';
+
+            const wasReels = document.body.classList.contains('reels-page-active');
+            if (page !== 'reels') {
+                document.body.classList.remove('reels-page-active','reels-toolbar-hidden');
+                const nav = document.getElementById('dynamic-nav');
+                if (nav) nav.classList.remove('reels-nav-hidden');
+                if (window.__sharedReelId) {
+                    const cleanURL = window.location.pathname + (window.location.hash || ('#' + page));
+                    history.replaceState({page:page},'',cleanURL);
+                    window.__sharedReelId = null;
+                }
+            } else {
+                document.body.classList.add('reels-page-active');
+            }
+
+            window.currentLoadedPage = page;
+            const display = document.getElementById('main-display');
+            const fileName = page === 'chat' ? 'chat_list' : page === 'reels' ? 'reels_view' : page;
+
+            if (pushToHistory) {
+                const nextURL = window.location.pathname + window.location.search + '#' + page;
+                history.pushState({page:page},'',nextURL);
+            }
+
+            logUserActivity(page);
+
+            try {
+                const res = await fetch(fileName + '.html');
+                if (!res.ok) throw new Error(`الملف ${fileName}.html غير موجود (${res.status})`);
+                display.innerHTML = await res.text();
+                updateNavActiveState();
+                await runInjectedScripts(display);
+            } catch(e) {
+                console.error(e);
+                display.innerHTML = `<div class="p-10 text-center text-red-500 font-bold">فشل تحميل الصفحة: ${fileName}.html</div>`;
+            }
+        }
+        window.loadPage = loadPage;
+
+        window.addEventListener('popstate',event => {
+            const page = event.state && event.state.page
+                ? event.state.page
+                : (window.location.hash.replace(/^#/,'') || getInitialPage());
+            loadPage(page,false);
+        });
+
+        auth.onAuthStateChanged(async user => {
+            checkMaintenanceMode();
+            const initialPage = getInitialPage();
+            window.appState.user = user;
+
+            if (user) {
+                fetchAndSyncUserData(user.uid);
+            } else {
+                if (userDataUnsubscribe) { userDataUnsubscribe(); userDataUnsubscribe = null; }
+                localStorage.removeItem('userData');
+                window.appState.userData = null;
+                window.appState.role = 'buyer';
+                window.appState.isBroker = false;
+                window.appState.isCompany = false;
+                renderNav('buyer');
+            }
+
+            if (!isInitialLoadDone) {
+                isInitialLoadDone = true;
+                const initialURL = window.location.pathname + window.location.search + '#' + initialPage;
+                history.replaceState({page:initialPage},'',initialURL);
+                try {
+                    await loadPage(initialPage,false);
+                } catch(err) {
+                    console.error('خطأ أثناء تحميل الصفحة الأولى:',err);
+                } finally {
+                    if (sessionStorage.getItem('splash_shown') !== 'true') setTimeout(hideSplashScreen,300);
+                }
+            }
+        });
+
+        window.addEventListener('pageshow',event => {
+            if (event.persisted && auth.currentUser) fetchAndSyncUserData(auth.currentUser.uid);
+        });
+    </script>
+</body>
+</html>

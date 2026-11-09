@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكارو - باقات الترويج ومحفظة النظام العقاري</title>
+    <!-- FontAwesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Tailwind CSS (Stable v3 CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; background-color: #09090b; color: #f4f4f5; }
+        .glass-card { background: #18181c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+        .animate-fade { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body class="min-h-screen pb-20 antialiased relative">
+
+    <div id="toast-container" class="fixed top-5 left-5 z-[500] flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- نافذة تأكيد الشراء والتفعيل التفاعلية -->
+    <div id="confirm-dialog" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden items-center justify-center p-4 z-[120] transition-all duration-300">
+        <div class="glass-card w-full max-w-sm p-6 text-center space-y-5 shadow-2xl relative overflow-hidden transform scale-95 transition-all border border-red-500/30">
+            <div class="w-14 h-14 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mx-auto text-red-500 text-xl shadow-lg">
+                <i class="fa-solid fa-gem"></i>
+            </div>
+            
+            <div>
+                <h3 id="dialog-plan-title" class="text-sm font-black text-white mb-1">تأكيد الاشتراك</h3>
+                <p id="dialog-plan-desc" class="text-xs text-zinc-400 leading-relaxed font-bold px-2">هل أنت متأكد من رغبتك في الاشتراك وتفعيل هذه الباقة لحسابك فوراً من رصيد المحفظة؟</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 pt-2">
+                <button id="confirm-purchase-btn" class="py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-black text-xs shadow-lg shadow-red-600/25 active:scale-95 transition-all">
+                    تأكيد وتفعيل
+                </button>
+                <button onclick="window.closeConfirmDialog()" class="py-3.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs active:scale-95 transition-all border border-zinc-700/50">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- الهيدر العلوي -->
+    <header class="border-b border-white/10 bg-[#121215]/90 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-tr from-red-600 to-rose-500 rounded-xl flex items-center justify-center font-black text-white text-lg">A</div>
+                <div>
+                    <h1 class="text-sm sm:text-base font-black tracking-wide text-white">أكارو — المحفظة والباقات</h1>
+                    <p class="text-[10px] text-zinc-400">إدارة الباقات والاشتراكات المركزية المرتبطة </p>
+                </div>
+            </div>
+            
+            <button onclick="goBackSmart()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/10 shadow-md">
+                <i class="fa-solid fa-arrow-right"></i> رجوع للخلف
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+        
+        <!-- كارد الرصيد الحالي -->
+        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-zinc-950 p-6 border border-zinc-800/80 shadow-2xl backdrop-blur-xl">
+            <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-red-600/15 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="flex items-center justify-between relative z-10">
+                <div>
+                    <span class="text-[11px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">رصيدك الحالي في المحفظة</span>
+                    <div class="flex items-baseline gap-2">
+                        <h2 id="balance-val" class="text-3xl font-black text-white tracking-tight">0</h2>
+                        <span class="text-xs text-red-500 font-black">ج.م</span>
+                    </div>
+                </div>
+                
+                <a href="deposit.html" class="px-4 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700/80 border border-zinc-700/60 text-white text-xs font-bold transition-all active:scale-95 shadow-lg flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-red-500"></i>
+                    <span>شحن المحفظة</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- شريط التبويبات العلوي -->
+        <div class="flex items-center p-1.5 bg-zinc-900/90 border border-zinc-800 rounded-2xl gap-2">
+            <button id="tab-btn-akaro" onclick="switchPackageTab('akaro')" class="flex-1 py-3 text-center text-xs font-black rounded-xl transition-all bg-red-600 text-white shadow-lg shadow-red-600/20">
+                <i class="fa-solid fa-gem ml-1.5"></i> باقات إعلانات أكارو
+            </button>
+            <button id="tab-btn-crm" onclick="switchPackageTab('crm')" class="flex-1 py-3 text-center text-xs font-black rounded-xl transition-all bg-zinc-800/60 text-zinc-400 hover:text-white">
+                <i class="fa-solid fa-users-gear ml-1.5"></i> باقات CRM العقاري
+            </button>
+        </div>
+
+        <!-- حاوية باقات إعلانات أكارو -->
+        <div id="section-akaro-plans">
+            <h3 class="text-xs font-extrabold text-zinc-400 mb-3 px-1 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                <span>باقات الترقية والتميز المتاحة</span>
+            </h3>
+            <div id="plans-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="text-center text-zinc-500 py-12 text-xs font-bold bg-zinc-900/40 rounded-3xl border border-zinc-800/50">
+                    <i class="fa-solid fa-circle-notch animate-spin text-red-500 text-base mb-2 block"></i>
+                    جاري تحميل الباقات من السيرفر...
+                </div>
+            </div>
+        </div>
+
+        <!-- حاوية باقات CRM العقاري (مرتبطة بالسيرفر بالكامل) -->
+        <div id="section-crm-plans" class="hidden">
+            <h3 class="text-xs font-extrabold text-zinc-400 mb-3 px-1 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                <span>اختر باقة الـ CRM المناسبة لفريق مبيعاتك</span>
+            </h3>
+
+            <div id="crm-server-plans-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center text-zinc-500 py-12 text-xs font-bold bg-zinc-900/40 rounded-3xl border border-zinc-800/50 col-span-full">
+                    <i class="fa-solid fa-circle-notch animate-spin text-purple-500 text-base mb-2 block"></i>
+                    جاري جلب باقات الـ CRM من قاعدة البيانات...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+            authDomain: "youssef-4170d.firebaseapp.com",
+            projectId: "youssef-4170d",
+            storageBucket: "youssef-4170d.appspot.com",
+            appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        window.selectedPlanData = null;
+        window.currentUserUid = null;
+        let crmTimers = {};
+        let currentUserData = null;
+
+        function goBackSmart() {
+            if (window.history.length > 1 && document.referrer !== "") {
+                window.history.back();
+            } else {
+                window.location.href = "index.html";
+            }
+        }
+
+        function showToast(title, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-2xl border bg-zinc-900 border-amber-500/40 text-amber-300 shadow-2xl animate-fade`;
+            toast.innerHTML = `<h5 class="font-bold text-sm text-white">${title}</h5><p class="text-xs">${message}</p>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        window.switchPackageTab = function(type) {
+            const akaroSec = document.getElementById('section-akaro-plans');
+            const crmSec = document.getElementById('section-crm-plans');
+            const btnAkaro = document.getElementById('tab-btn-akaro');
+            const btnCrm = document.getElementById('tab-btn-crm');
+
+            if (type === 'akaro') {
+                akaroSec.classList.remove('hidden');
+                crmSec.classList.add('hidden');
+                btnAkaro.className = "flex-1 py-3 text-center text-xs font-black rounded-xl transition-all bg-red-600 text-white shadow-lg shadow-red-600/20";
+                btnCrm.className = "flex-1 py-3 text-center text-xs font-black rounded-xl transition-all bg-zinc-800/60 text-zinc-400 hover:text-white";
+            } else {
+                crmSec.classList.remove('hidden');
+                akaroSec.classList.add('hidden');
+                btnCrm.className = "flex-1 py-3 text-center text-xs font-black rounded-xl transition-all bg-purple-600 text-white shadow-lg shadow-purple-600/20";
+                btnAkaro.className = "flex-1 py-3 text-center text-xs font-black rounded-xl transition-all bg-zinc-800/60 text-zinc-400 hover:text-white";
+            }
+        };
+
+        window.openConfirmDialog = function(id, name, price, durationDays) {
+            window.selectedPlanData = { id, name, price, durationDays };
+            const titleEl = document.getElementById('dialog-plan-title');
+            const descEl = document.getElementById('dialog-plan-desc');
+            const dialogEl = document.getElementById('confirm-dialog');
+            
+            if (titleEl) titleEl.innerText = `اشتراك: ${name}`;
+            if (descEl) descEl.innerText = price === 0 ? `تفعيل الباقة المجانية التجريبية للـ CRM لمدة ${durationDays} أيام لحسابك من السيرفر.` : `سيتم خصم مبلغ (${price} ج.م) وتفعيل الباقة لحسابك فوراً.`;
+            
+            if (dialogEl) {
+                dialogEl.classList.remove('hidden');
+                dialogEl.classList.add('flex');
+            }
+        };
+
+        window.closeConfirmDialog = function() {
+            const dialogEl = document.getElementById('confirm-dialog');
+            if (dialogEl) {
+                dialogEl.classList.add('hidden');
+                dialogEl.classList.remove('flex');
+            }
+            window.selectedPlanData = null;
+        };
+
+        // جلب باقات الـ CRM من السيرفر (Firestore: crm_plans) وعرضها تفاعلياً
+        function fetchCrmPlansFromServer() {
+            db.collection('crm_plans').onSnapshot(snapshot => {
+                const container = document.getElementById('crm-server-plans-container');
+                if (!container) return;
+                
+                if (snapshot.empty) {
+                    // إذا لم تكن موجودة في السيرفر بعد، نعرض باقات افتراضية مربوطة بالبنية الأساسية
+                    renderDefaultCrmPlans(container);
+                    return;
+                }
+
+                let html = '';
+                snapshot.forEach(doc => {
+                    const plan = doc.data();
+                    const planId = doc.id;
+                    const name = plan.name || 'باقة CRM';
+                    const price = Number(plan.price || 0);
+                    const durationDays = Number(plan.durationDays || 30);
+                    const isPopular = plan.isPopular || false;
+                    const safeName = name.replace(/'/g, "\\'");
+
+                    // التحقق مما إذا كانت هذه الباقة هي الباقة النشطة حالياً للمستخدم
+                    const activePlan = currentUserData ? currentUserData.activePlanId : null;
+                    const endDateRaw = currentUserData ? currentUserData.crmTrialEndDate : null;
+                    const now = new Date();
+                    const endDate = endDateRaw ? (endDateRaw.toDate ? endDateRaw.toDate() : new Date(endDateRaw)) : null;
+                    const isStillActive = endDate && now < endDate && activePlan === planId;
+
+                    let actionHtml = '';
+                    if (isStillActive) {
+                        actionHtml = `<div id="timer-${planId}" class="mt-2 p-3 rounded-2xl border border-red-500/30 bg-red-500/10 text-red-400 text-center shadow-lg"><span class="text-xs font-black block mb-1">هذه الباقة نشطة حالياً ✅</span><span id="countdown-${planId}" class="text-[10px] font-bold text-zinc-200">جاري حساب الوقت...</span></div>`;
+                        startTimerUI(planId, endDate);
+                    } else if (planId === 'crm_trial' && currentUserData && currentUserData.crmTrialUsed) {
+                        actionHtml = `<div class="mt-2 p-2.5 rounded-2xl bg-zinc-800 text-center text-[10px] text-zinc-400 font-bold">لقد استخدمت التجربة مسبقاً</div>`;
+                    } else {
+                        const btnColor = isPopular ? 'bg-red-600 hover:bg-red-500 shadow-lg shadow-red-600/25' : 'bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/20';
+                        actionHtml = `<button onclick="window.openConfirmDialog('${planId}', '${safeName}', ${price}, ${durationDays})" class="w-full mt-2 py-3 rounded-2xl ${btnColor} text-xs font-black text-white transition-all active:scale-95 flex items-center justify-center gap-2"><span>${price === 0 ? 'تجربة مجانية 🚀' : 'اشتراك الآن'}</span>${price > 0 ? '<i class="fa-solid fa-arrow-left text-[10px]"></i>' : ''}</button>`;
+                    }
+
+                    html += `
+                        <div class="bg-gradient-to-b ${isPopular ? 'from-zinc-900 via-zinc-900 to-zinc-950 border-2 border-red-500/60' : 'from-zinc-900/90 to-zinc-900 border border-zinc-800'} rounded-3xl p-5 relative shadow-xl flex flex-col justify-between">
+                            ${isPopular ? '<div class="absolute -top-3 right-4 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[9px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1"><i class="fa-solid fa-fire text-yellow-300"></i> الأكثر شيوعاً</div>' : ''}
+                            <div class="${isPopular ? 'pt-2' : ''}">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h4 class="font-black text-white text-sm">${name}</h4>
+                                        <span class="bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-black px-2 py-0.5 rounded-md mt-1 inline-block">${plan.badge || 'باقة معتمدة'}</span>
+                                    </div>
+                                    <div class="text-left">
+                                        <span class="text-xl font-black ${isPopular ? 'text-red-500' : 'text-purple-400'}">${price.toLocaleString()}</span>
+                                        <span class="text-[9px] text-zinc-400 font-bold block">${price > 0 ? 'ج.م / مدة الباقة' : 'مجاناً'}</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-2.5 py-3 border-t border-b border-zinc-800/80 my-3 text-[11px] font-bold text-zinc-300">
+                                    <div class="flex items-center justify-between"><span class="text-zinc-400"><i class="fa-solid fa-users text-purple-400 text-[10px] ml-1"></i> السيلز:</span><span class="text-white font-black">${plan.salesLimit || 'غير محدود'}</span></div>
+                                    <div class="flex items-center justify-between"><span class="text-zinc-400"><i class="fa-solid fa-file-excel text-emerald-400 text-[10px] ml-1"></i> رفع الإكسيل:</span><span class="text-white font-black">${plan.excelLimit || 'مفتوح'}</span></div>
+                                    <div class="flex items-center justify-between"><span class="text-zinc-400"><i class="fa-solid fa-clock text-blue-400 text-[10px] ml-1"></i> المدة :</span><span class="text-white font-black">${durationDays} يوماً</span></div>
+                                </div>
+                            </div>
+                            <div>${actionHtml}</div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            });
+        }
+
+        function renderDefaultCrmPlans(container) {
+            // باقات افتراضية في حال لم يتم رفعها في مجموعة crm_plans بعد
+            fetchCrmPlansFromServer();
+        }
+
+        function startTimerUI(planId, targetDate) {
+            if (crmTimers[planId]) clearInterval(crmTimers[planId]);
+            function update() {
+                const now = new Date();
+                const diff = targetDate - now;
+                const el = document.getElementById(`countdown-${planId}`);
+                if (!el) return;
+                if (diff <= 0) {
+                    el.innerText = "انتهت صلاحية الباقة";
+                    return;
+                }
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                el.innerText = `متبقي: ${days} يوم و ${hours} ساعة و ${mins} دقيقة`;
+            }
+            update();
+            crmTimers[planId] = setInterval(update, 60000);
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                window.currentUserUid = user.uid;
+                db.collection('crm_users').doc(user.uid).onSnapshot(doc => {
+                    const balanceEl = document.getElementById('balance-val');
+                    if (doc.exists) {
+                        currentUserData = doc.data();
+                        if (balanceEl) balanceEl.innerText = Number(currentUserData.balance || 0).toLocaleString();
+                        fetchCrmPlansFromServer(); // إعادة رسم الباقات بناءً على اشتراك المستخدم الحالي والسيرفر
+                    } else {
+                        db.collection('crm_users').doc(user.uid).set({ balance: 0, crmTrialUsed: false }, { merge: true });
+                        if (balanceEl) balanceEl.innerText = "0";
+                    }
+                });
+            } else {
+                window.currentUserUid = null;
+                window.location.href = "index.html";
+            }
+        });
+
+        // جلب باقات الترويج والإعلانات من السيرفر
+        db.collection("packages").onSnapshot(s => {
+            const cont = document.getElementById('plans-container');
+            if (!cont) return;
+            cont.innerHTML = "";
+            
+            if (s.empty) {
+                cont.innerHTML = `<div class="text-center text-zinc-500 py-12 text-xs font-bold bg-zinc-900/40 rounded-3xl border border-zinc-800/50 col-span-full">لا توجد باقات إعلانات متاحة حالياً على السيرفر</div>`;
+                return;
+            }
+
+            s.forEach(doc => {
+                const p = doc.data();
+                const planId = doc.id;
+                const safeName = (p.name || 'باقة مميزة').replace(/'/g, "\\'");
+                const price = Number(p.price || 0);
+
+                cont.innerHTML += `
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 relative shadow-xl hover:border-zinc-700 transition-all flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-black text-white text-sm">${p.name || 'باقة مميزة'}</h4>
+                                ${p.discount ? `<span class="bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-black px-2 py-0.5 rounded-md mt-1 inline-block">خصم ${p.discount}%</span>` : ''}
+                            </div>
+                            <div class="text-left">
+                                <span class="text-xl font-black text-red-500">${price.toLocaleString()}</span>
+                                <span class="text-[9px] text-zinc-400 font-bold block">ج.م</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 py-3 border-t border-b border-zinc-800/80 my-3 text-[11px] font-bold text-zinc-300">
+                            <div class="flex items-center justify-between"><span class="text-zinc-400"><i class="fa-solid fa-bolt text-yellow-500 text-[10px] ml-1"></i> عمليات التمييز:</span><span class="text-white font-black">${p.boosts || 0} عملية</span></div>
+                            <div class="flex items-center justify-between"><span class="text-zinc-400"><i class="fa-solid fa-location-dot text-red-500 text-[10px] ml-1"></i> الأحياء المسموحة:</span><span class="text-white font-black">${p.districts || 0} حي</span></div>
+                            <div class="flex items-center justify-between"><span class="text-zinc-400"><i class="fa-solid fa-video text-emerald-500 text-[10px] ml-1"></i> الفيديوهات (ريلز):</span><span class="text-white font-black">${p.reelsLimit || 0} فيديو</span></div>
+                        </div>
+                    </div>
+
+                    <button onclick="window.openConfirmDialog('${planId}', '${safeName}', ${price}, 30)" class="w-full mt-2 py-3 rounded-2xl bg-red-600 hover:bg-red-500 shadow-lg shadow-red-600/20 text-xs font-black text-white transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <span>اشتراك الآن</span>
+                        <i class="fa-solid fa-arrow-left text-[10px]"></i>
+                    </button>
+                </div>`;
+            });
+        });
+
+        const confirmBtn = document.getElementById('confirm-purchase-btn');
+        if (confirmBtn) {
+            confirmBtn.onclick = async function() {
+                if (!window.selectedPlanData || !window.currentUserUid) return;
+
+                const btn = this;
+                btn.disabled = true;
+                btn.innerText = "جاري التفعيل عبر السيرفر...";
+
+                try {
+                    const userRef = db.collection('crm_users').doc(window.currentUserUid);
+                    const planId = window.selectedPlanData.id;
+                    const isTrial = planId === 'crm_trial';
+                    const durationDays = Number(window.selectedPlanData.durationDays || 30);
+
+                    await db.runTransaction(async (transaction) => {
+                        const userDoc = await transaction.get(userRef);
+                        if (!userDoc.exists) throw new Error("بيانات المستخدم غير موجودة");
+
+                        const userData = userDoc.data();
+                        const currentBalance = Number(userData.balance || 0);
+                        const price = Number(window.selectedPlanData.price);
+
+                        if (isTrial && userData.crmTrialUsed) {
+                            throw new Error("ALREADY_USED_TRIAL");
+                        }
+
+                        if (!isTrial && currentBalance < price) {
+                            throw new Error("INSUFFICIENT_BALANCE");
+                        }
+
+                        const now = new Date();
+                        const endDate = new Date();
+                        endDate.setDate(now.getDate() + durationDays); // اعتماد المدة القادمة من السيرفر مباشرة
+
+                        const updateData = {
+                            activePlanId: planId,
+                            crmPlanType: planId,
+                            planUpdatedAt: now,
+                            crmTrialEndDate: endDate
+                        };
+
+                        if (!isTrial) {
+                            updateData.balance = currentBalance - price;
+                        }
+
+                        if (isTrial) {
+                            updateData.crmTrialUsed = true;
+                            updateData.crmTrialStartDate = now;
+                        }
+
+                        transaction.update(userRef, updateData);
+
+                        if (price > 0) {
+                            const transRef = db.collection('transactions').doc();
+                            transaction.set(transRef, {
+                                userId: window.currentUserUid,
+                                type: 'package_purchase',
+                                planId: planId,
+                                planName: window.selectedPlanData.name,
+                                amount: price,
+                                createdAt: now
+                            });
+                        }
+                    });
+
+                    window.closeConfirmDialog();
+                    showToast("نجاح ✅", "تم تفعيل الاشتراك بنجاح من السيرفر وربط كافة الصلاحيات والشات!");
+                    setTimeout(() => {
+                        goBackSmart();
+                    }, 1500);
+                    
+                } catch (error) {
+                    console.error("خطأ الشراء:", error);
+                    if (error.message === "INSUFFICIENT_BALANCE") {
+                        alert("رصيدك غير كافي لإتمام هذه العملية! يجدر بك شحن المحفظة.");
+                        window.location.href = "deposit.html";
+                    } else if (error.message === "ALREADY_USED_TRIAL") {
+                        alert("لقد استنفدت بالفعل حقك في الباقة المجانية التجريبية مسبقاً.");
+                    } else {
+                        alert("حدث خطأ أثناء العملية: " + error.message);
+                    }
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = "تأكيد وتفعيل";
+                }
+            };
+        }
+    </script>
+</body>
+</html>

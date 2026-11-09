@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>انضم لفريقنا | منصة أكارو العقارية</title>
+    
+    <!-- وسوم الـ SEO -->
+    <meta name="description" content="انضم إلى فريق عمل منصة أكارو - شاركنا في إعادة صياغة مستقبل السوق العقاري في مصر والشرق الأوسط.">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; background: #0d0d0d; color: white; margin: 0; }
+    </style>
+</head>
+<body class="bg-[#0d0d0d] min-h-screen flex flex-col justify-between">
+
+    <!-- شريط معلومات التواصل العلوي -->
+    <div class="bg-[#141414] border-b border-[#262626] text-gray-400 text-xs py-2.5 px-6 md:px-12">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-6 flex-wrap">
+                <div class="flex items-center gap-2 hover:text-red-500 transition">
+                    <i class="fa-solid fa-phone text-red-500"></i>
+                    <span>+20 100 000 0000</span>
+                </div>
+                <div class="flex items-center gap-2 hover:text-red-500 transition">
+                    <i class="fa-solid fa-envelope text-red-500"></i>
+                    <span>careers@aqaro.com</span>
+                </div>
+            </div>
+            <div>
+                <span class="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full font-bold">فرص العمل في أكارو</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- الهيدر الرئيسي -->
+    <header class="w-full h-[80px] bg-[#1a1a1a]/95 backdrop-blur-md border-b border-[#333] flex items-center justify-between px-6 md:px-12 sticky top-0 z-50">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="location.href='index.html#home'">
+            <img src="https://i.ibb.co/fdnhVgjt/Picsart-26-10-01-00-34-44-917.png" class="w-10 h-10 rounded-xl object-cover">
+            <h1 class="text-xl font-black text-white">أكارو</h1>
+        </div>
+        <a href="index.html#home" class="bg-[#333] hover:bg-red-500 text-gray-300 hover:text-white px-5 py-2 rounded-full text-xs font-bold transition flex items-center gap-2">
+            <i class="fa-solid fa-arrow-right"></i> العودة للرئيسية
+        </a>
+    </header>
+
+    <!-- محتوى الصفحة -->
+    <main class="flex-1 max-w-5xl mx-auto px-6 py-12 w-full">
+        <!-- قسم العنوان الرئيسي -->
+        <div class="text-center mb-16">
+            <div class="inline-block p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-500 text-3xl mb-4">
+                <i class="fa-solid fa-briefcase"></i>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-black text-white mb-4">اصنع مستقبلك المهني معنا</h2>
+            <p class="text-gray-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                في منصة أكارو، نؤمن أن الكفاءات المبدعة هي سر النجاح. انضم إلى فريقنا واصنع معنا ثورة تقنية في قطاع العقارات المصري والعربي.
+            </p>
+        </div>
+
+        <!-- قسم الوظائف النشطة والمنشورة ديناميكياً من الأدمن -->
+        <div class="mb-12">
+            <h3 class="text-xl font-black text-white mb-6 flex items-center gap-3">
+                <i class="fa-solid fa-fire text-red-500"></i> الوظائف الشاغرة المتاحة حالياً
+            </h3>
+            
+            <!-- الحاوية التي ستظهر فيها الوظائف المنشورة تلقائياً -->
+            <div id="dynamic-jobs-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <p class="text-gray-500 text-xs text-center py-6 col-span-2">جاري البحث عن الوظائف المتاحة...</p>
+            </div>
+        </div>
+
+        <!-- قسم التقديم العام الثابت -->
+        <div class="mb-20">
+            <h3 class="text-xl font-black text-white mb-6 flex items-center gap-3">
+                <i class="fa-solid fa-star text-red-500"></i> باب الانضمام المفتوح
+            </h3>
+
+            <div class="bg-[#1a1a1a] border border-[#333] p-8 rounded-3xl flex flex-col justify-between hover:border-red-500/40 transition shadow-xl">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-red-500/10 text-red-500 text-xs px-3 py-1 rounded-full font-bold">فرصة دائمة</span>
+                        <span class="text-gray-500 text-xs"><i class="fa-solid fa-location-dot text-red-500"></i> مصر / عن بعد</span>
+                    </div>
+                    <h4 class="text-xl font-bold text-white mb-3">تقديم عام (Open Application)</h4>
+                    <p class="text-gray-400 text-xs md:text-sm leading-relaxed mb-6">
+                        نحن نبحث دائماً عن العقول المبدعة في مجالات البرمجة (تطوير الويب والتطبيقات)، الإدارة العقارية، صناعة المحتوى والتسويق الرقمي. أرسل سيرتك الذاتية وحدثنا عن شغفك، وسنقوم بالتفاوض معك فور توفر الشاغر المناسب لخبراتك.
+                    </p>
+                </div>
+                <button onclick="selectJob('تقديم عام (Open Application)')" class="w-full bg-[#262626] hover:bg-red-600 text-gray-200 hover:text-white py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> تقدم عبر التقديم العام
+                </button>
+            </div>
+        </div>
+
+        <!-- قسم نموذج التقديم -->
+        <section id="apply-section" class="bg-gradient-to-b from-[#1a1a1a] to-[#121212] border border-[#333] rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+            
+            <div class="mb-8 border-b border-[#262626] pb-4">
+                <span class="text-red-500 text-xs font-bold uppercase tracking-widest block mb-1">نموذج التقديم السريع</span>
+                <h3 class="text-2xl font-black text-white" id="form-heading">سجل بياناتك وانضم إلينا 📝</h3>
+            </div>
+
+            <form id="job-form" class="space-y-6">
+                <!-- الوظيفة المختارة -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-2">المسار المهني / الوظيفة المستهدفة</label>
+                    <input type="text" id="job-title" required readonly 
+                        class="w-full bg-[#141414]/60 border border-[#333] rounded-xl px-4 py-3 text-sm text-red-400 font-bold focus:outline-none cursor-not-allowed" 
+                        value="تقديم عام (Open Application)">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- الاسم الكامل -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 mb-2">الاسم الكامل</label>
+                        <input type="text" id="applicant-name" required placeholder="أدخل اسمك الثلاثي" 
+                            class="w-full bg-[#141414] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition">
+                    </div>
+                    <!-- البريد الإلكتروني -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 mb-2">البريد الإلكتروني</label>
+                        <input type="email" id="applicant-email" required placeholder="name@example.com" 
+                            class="w-full bg-[#141414] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- رقم الهاتف -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 mb-2">رقم الهاتف (واتساب)</label>
+                        <input type="tel" id="applicant-phone" required placeholder="+20 100 000 0000" 
+                            class="w-full bg-[#141414] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition">
+                    </div>
+                    <!-- رابط السيرة الذاتية (CV Link) -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 mb-2">رابط السيرة الذاتية (Google Drive / LinkedIn)</label>
+                        <input type="url" id="applicant-cv" required placeholder="https://linkedin.com/in/... أو رابط ملف الـ CV" 
+                            class="w-full bg-[#141414] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition">
+                    </div>
+                </div>
+
+                <!-- نبذة عن المتقدم -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-2">نبذة مختصرة عن خبرتك ومهاراتك وكيف يمكنك إضافة قيمة لأكارو</label>
+                    <textarea id="applicant-bio" rows="4" required placeholder="تحدث بإيجاز عن خبراتك السابقة وتخصصك التقني أو الإداري..." 
+                        class="w-full bg-[#141414] border border-[#333] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition resize-none"></textarea>
+                </div>
+
+                <!-- زر الإرسال -->
+                <button type="submit" id="apply-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/20">
+                    <i class="fa-solid fa-paper-plane"></i> إرسال طلب الانضمام
+                </button>
+            </form>
+
+            <!-- رسالة النجاح الفورية -->
+            <div id="job-status-msg" class="hidden mt-4 p-4 rounded-xl text-center text-xs font-bold"></div>
+        </section>
+    </main>
+
+    <!-- الفوتر -->
+    <footer class="bg-[#1a1a1a] border-t border-[#333] py-6 text-center text-xs text-gray-500 mt-20">
+        © 2026 منصة أكارو العقارية. جميع الحقوق محفوظة.
+    </footer>
+
+    <!-- السكربت البرمجي للتفاعل وجلب الوظائف ديناميكياً وإرسال الطلبات -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+            authDomain: "youssef-4170d.firebaseapp.com",
+            projectId: "youssef-4170d",
+            storageBucket: "youssef-4170d.appspot.com",
+            appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // جلب الوظائف المنشورة من لوحة الأدمن وعرضها فوراً
+        async function loadDynamicJobs() {
+            const container = document.getElementById('dynamic-jobs-container');
+            try {
+                let snapshot = await db.collection('available_jobs').get();
+                if (snapshot.empty) {
+                    container.innerHTML = `<p class="text-gray-500 text-xs text-center py-6 col-span-2 bg-[#1a1a1a] border border-[#333] rounded-3xl">لا توجد وظائف مخصصة منشورة حالياً، يمكنك استخدام التفاصيل عبر التقديم العام أدناه.</p>`;
+                    return;
+                }
+                
+                let html = '';
+                snapshot.forEach(doc => {
+                    const job = doc.data();
+                    html += `
+                        <div class="bg-[#1a1a1a] border border-[#333] p-6 rounded-3xl flex flex-col justify-between hover:border-red-500/40 transition shadow-xl">
+                            <div>
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="bg-red-500/10 text-red-500 text-xs px-3 py-1 rounded-full font-bold">${job.type}</span>
+                                    <span class="text-gray-500 text-xs"><i class="fa-solid fa-location-dot text-red-500"></i> ${job.location}</span>
+                                </div>
+                                <h4 class="text-lg font-bold text-white mb-2">${job.title}</h4>
+                                <p class="text-gray-400 text-xs leading-relaxed mb-6">${job.description}</p>
+                            </div>
+                            <button onclick="selectJob('${job.title}')" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/20">
+                                <i class="fa-solid fa-paper-plane"></i> تقدم لهذه الوظيفة
+                            </button>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch(e) {
+                console.error(e);
+                container.innerHTML = `<p class="text-red-500 text-xs text-center py-6 col-span-2">خطأ في تحميل الوظائف النشطة.</p>`;
+            }
+        }
+
+        function selectJob(jobTitle) {
+            const inputField = document.getElementById('job-title');
+            inputField.value = jobTitle;
+            document.getElementById('apply-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        const jobForm = document.getElementById('job-form');
+        const applyBtn = document.getElementById('apply-btn');
+        const jobStatusMsg = document.getElementById('job-status-msg');
+
+        jobForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> جاري إرسال الطلب...`;
+
+            const selectedJob = document.getElementById('job-title').value;
+            const name = document.getElementById('applicant-name').value.trim();
+            const email = document.getElementById('applicant-email').value.trim();
+            const phone = document.getElementById('applicant-phone').value.trim();
+            const cv = document.getElementById('applicant-cv').value.trim();
+            const bio = document.getElementById('applicant-bio').value.trim();
+
+            try {
+                await db.collection('job_applications').add({
+                    jobTitle: selectedJob,
+                    name,
+                    email,
+                    phone,
+                    cv,
+                    bio,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                jobStatusMsg.className = "mt-4 p-4 rounded-xl text-center text-xs font-bold bg-green-500/10 text-green-500 border border-green-500/20";
+                jobStatusMsg.innerHTML = `<i class="fa-solid fa-circle-check"></i> تم إرسال طلبك بنجاح! فريق التوظيف في أكارو سيتواصل معك قريبًا عند مراجعة سيرتك الذاتية.`;
+                jobStatusMsg.classList.remove('hidden');
+
+                jobForm.reset();
+                document.getElementById('job-title').value = "تقديم عام (Open Application)";
+
+                setTimeout(() => jobStatusMsg.classList.add('hidden'), 6000);
+            } catch (err) {
+                console.error(err);
+                jobStatusMsg.className = "mt-4 p-4 rounded-xl text-center text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20";
+                jobStatusMsg.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> حدث خطأ أثناء إرسال الطلب، حاول مرة أخرى لاحقاً.`;
+                jobStatusMsg.classList.remove('hidden');
+            } finally {
+                applyBtn.disabled = false;
+                applyBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> إرسال طلب الانضمام`;
+            }
+        });
+
+        // تشغيل دالة جلب الوظائف عند تحميل الصفحة
+        loadDynamicJobs();
+    </script>
+</body>
+</html>

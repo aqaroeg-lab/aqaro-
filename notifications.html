@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مركز الإشعارات | أكارو</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <style>
+        body { background-color: #0a0a0a; color: white; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
+        .notif-card { border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s; cursor: pointer; }
+        .notif-card:active { background: rgba(255,255,255,0.08); transform: scale(0.99); }
+        .unread { border-right: 3px solid #ef4444; background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="no-scrollbar">
+
+    <div class="p-6 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-xl z-50 flex items-center justify-between border-b border-white/5">
+        <button onclick="history.back()" class="text-gray-400 p-2 hover:text-white">❮</button>
+        <h1 class="text-lg font-black tracking-widest text-white/90">الإشعارات</h1>
+        <div class="w-10"></div>
+    </div>
+
+    <div id="notifications-list" class="flex flex-col pb-24">
+        <div id="main-loader" class="p-24 text-center">
+            <div class="inline-block w-6 h-6 border-[3px] border-red-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-[10px] text-gray-500 mt-4 font-bold tracking-widest">جاري التحقق من الجلسة...</p>
+        </div>
+    </div>
+
+    <script>
+        // 1. إعدادات Firebase الخاصة بك
+        const firebaseConfig = {
+            apiKey: "AIzaSy...", 
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // 2. إدارة حالة الدخول (حل مشكلة التوجيه لـ welcome)
+        auth.onAuthStateChanged(user => {
+            const list = document.getElementById('notifications-list');
+            if (user) {
+                console.log("تم التأكد من المستخدم:", user.uid);
+                loadNotifications(user);
+            } else {
+                // ننتظر قليلاً للتأكد أن الحالة ليست مجرد تأخير في التحميل
+                setTimeout(() => {
+                    if (!auth.currentUser) {
+                        window.location.replace('welcome.html');
+                    }
+                }, 1500);
+            }
+        });
+
+        async function loadNotifications(user) {
+            const list = document.getElementById('notifications-list');
+
+            try {
+                // جلب رتبة المستخدم من كوليكشن users
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userRole = userDoc.exists ? userDoc.data().role : 'buyer';
+
+                // الاستماع الحي للإشعارات الموجهة لهذا الـ ID
+                db.collection('notifications')
+                    .where('receiverId', '==', user.uid)
+                    .onSnapshot(snap => {
+                        if (snap.empty) {
+                            list.innerHTML = `
+                                <div class="p-20 text-center opacity-30">
+                                    <span class="text-5xl block mb-4">🔕</span>
+                                    <p class="text-xs font-bold uppercase tracking-widest">لا يوجد تنبيهات</p>
+                                </div>`;
+                            return;
+                        }
+
+                        // تحويل البيانات لـ Array للترتيب اليدوي
+                        let items = [];
+                        snap.forEach(doc => {
+                            items.push({ id: doc.id, ...doc.data() });
+                        });
+
+                        // ترتيب: الأحدث فوق
+                        items.sort((a, b) => {
+                            const timeA = a.timestamp?.seconds || 0;
+                            const timeB = b.timestamp?.seconds || 0;
+                            return timeB - timeA;
+                        });
+
+                        let html = '';
+                        items.forEach(notif => {
+                            html += renderCard(notif, userRole);
+                        });
+                        list.innerHTML = html;
+
+                    }, err => {
+                        console.error("Firestore Error:", err);
+                        list.innerHTML = `<p class="p-10 text-center text-red-500 text-[10px]">فشل جلب البيانات: ${err.message}</p>`;
+                    });
+
+            } catch (error) {
+                console.error("Initialization Error:", error);
+                list.innerHTML = `<p class="p-10 text-center text-red-500 text-[10px]">خطأ في النظام</p>`;
+            }
+        }
+
+        function renderCard(notif, role) {
+            const isRead = notif.read === true;
+            let icon = '🔔';
+            let color = 'text-gray-500';
+
+            // تخصيص الأيقونة
+            if (notif.type === 'message') { icon = '💬'; color = 'text-blue-500'; }
+            else if (notif.type === 'lead') { icon = '🔥'; color = 'text-orange-500'; }
+            else if (notif.type === 'system') { icon = '🛡️'; color = 'text-red-500'; }
+            else if (notif.type === 'reel_like') { icon = '❤️'; color = 'text-pink-500'; }
+
+            const time = notif.timestamp ? new Date(notif.timestamp.seconds * 1000).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}) : '--:--';
+
+            return `
+                <div class="notif-card p-5 flex gap-4 ${!isRead ? 'unread' : ''}" onclick="openNotif('${notif.id}', '${notif.link || '#'}')">
+                    <div class="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-xl ${color} flex-shrink-0">
+                        ${icon}
+                    </div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="flex justify-between items-center mb-1">
+                            <h4 class="text-[13px] font-bold text-white/90 truncate w-3/4">${notif.title || 'تنبيه'}</h4>
+                            <span class="text-[9px] text-gray-600 font-bold">${time}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 leading-snug truncate">${notif.body || ''}</p>
+                        ${role === 'broker' && notif.type === 'lead' ? 
+                            `<span class="inline-block mt-2 px-2 py-0.5 bg-orange-600 text-black text-[8px] font-black rounded uppercase">فرصة بيع</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // دالة فتح الإشعار وتحديث حالته لـ "مقروء"
+        window.openNotif = function(id, link) {
+            db.collection('notifications').doc(id).update({ read: true }).finally(() => {
+                if (link && link !== '#') {
+                    window.location.href = link;
+                }
+            });
+        };
+    </script>
+</body>
+</html>

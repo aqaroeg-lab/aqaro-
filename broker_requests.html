@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طلبات العملاء العقارية - أكارو بروكرز</title>
+    <!-- استدعاء Tailwind CSS وأيقونات FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- استدعاء مكتبات Firebase الأساسية (SDKs) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-[#09090b] text-zinc-100 antialiased selection:bg-red-500 selection:text-white min-h-screen pb-28">
+
+<!-- حاوية التنبيهات السريعة (Toast System) -->
+<div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[110] flex flex-col gap-2 w-full max-w-xs px-4 pointer-events-none"></div>
+
+<!-- المحتوى الرئيسي -->
+<div class="w-full max-w-5xl mx-auto py-6 px-3 md:px-8">
+
+    <!-- Header & Title -->
+    <div class="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
+        <div>
+            <h1 class="text-sm md:text-lg font-black text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                لوحة طلبات العملاء والمشترين
+            </h1>
+            <p class="text-[11px] text-zinc-400 mt-0.5">تصفح طلبات العقارات المباشرة وتواصل مع العملاء فوراً</p>
+        </div>
+        
+        <button onclick="if(typeof loadPage === 'function') loadPage('home'); else history.back();" class="text-zinc-400 hover:text-white transition w-9 h-9 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+    </div>
+
+    <!-- Toolbar العلوي للتبديل بين ريسيل وبريميري -->
+    <div class="mb-6">
+        <div class="grid grid-cols-2 gap-2 p-1.5 bg-zinc-900/90 rounded-2xl border border-zinc-800/80 shadow-xl max-w-md mx-auto">
+            <button type="button" id="tab-resale" onclick="switchRequestsFlow('resale')" class="py-2.5 bg-red-600 text-white rounded-xl text-xs font-black transition shadow-md flex items-center justify-center gap-2">
+                <i class="fa-solid fa-house-user"></i> طلبات ريسيل (Resale)
+            </button>
+            <button type="button" id="tab-premium" onclick="switchRequestsFlow('premium')" class="py-2.5 bg-transparent text-zinc-400 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 hover:text-white">
+                <i class="fa-solid fa-building-flag"></i> طلبات بريميري (Premium)
+            </button>
+        </div>
+    </div>
+
+    <!-- شريط البحث والفلترة السريعة داخل الطلبات -->
+    <div class="mb-6 max-w-md mx-auto">
+        <div class="bg-zinc-900/90 backdrop-blur-md p-3 rounded-2xl border border-zinc-800/80 flex items-center gap-3 shadow-lg focus-within:border-amber-500/50 transition-all">
+            <i class="fa-solid fa-magnifying-glass text-zinc-400 text-xs shrink-0"></i>
+            <input type="text" id="requests-search" oninput="renderBrokerRequests()" placeholder="ابحث بالمحافظة، المدينة، أو التصنيف..." class="bg-transparent border-none outline-none text-xs text-white w-full font-bold placeholder:text-zinc-600">
+        </div>
+    </div>
+
+    <!-- قائمة عرض الطلبات -->
+    <div id="broker-requests-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="col-span-full text-center py-12 text-zinc-500 text-xs md:text-sm font-bold">
+            <i class="fa-solid fa-circle-notch fa-spin text-amber-500 text-lg mb-2 block"></i>
+            جاري تحميل طلبات العملاء...
+        </div>
+    </div>
+
+</div>
+
+<script>
+(function() {
+    // إعدادات فايربيس الخاصة بك
+    const firebaseConfig = {
+        apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+        authDomain: "youssef-4170d.firebaseapp.com",
+        projectId: "youssef-4170d",
+        storageBucket: "youssef-4170d.appspot.com",
+        appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+    };
+
+    // تهيئة Firebase إذا لم تكن مفعلة مسبقاً
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const database = firebase.firestore();
+    window.db = database; // لضمان ربطها عالمياً إذا احتجتها
+
+    let currentFlow = 'resale'; // الافتراضي ريسيل
+    let allRequests = [];
+
+    // نظام التنبيهات Toast
+    window.showToast = (msg, type = 'info') => {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `p-3 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white text-[11px] md:text-xs font-bold shadow-2xl flex items-center gap-2 transform transition-all duration-300 translate-y-[-10px] opacity-0 pointer-events-auto`;
+        toast.innerHTML = `
+            <span class="w-2 h-2 rounded-full ${type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} shrink-0"></span>
+            <span class="flex-1">${msg}</span>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => { toast.classList.remove('translate-y-[-10px]', 'opacity-0'); }, 10);
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-[-10px]');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    };
+
+    // تبديل التولبر بين ريسيل وبريميري
+    window.switchRequestsFlow = function(flow) {
+        currentFlow = flow;
+        const btnResale = document.getElementById('tab-resale');
+        const btnPremium = document.getElementById('tab-premium');
+
+        if (flow === 'resale') {
+            btnResale.className = "py-2.5 bg-red-600 text-white rounded-xl text-xs font-black transition shadow-md flex items-center justify-center gap-2";
+            btnPremium.className = "py-2.5 bg-transparent text-zinc-400 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 hover:text-white";
+        } else {
+            btnPremium.className = "py-2.5 bg-cyan-600 text-white rounded-xl text-xs font-black transition shadow-md flex items-center justify-center gap-2";
+            btnResale.className = "py-2.5 bg-transparent text-zinc-400 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 hover:text-white";
+        }
+
+        renderBrokerRequests();
+    };
+
+    // الاستماع المباشر لكوليكشن broker_requests من فايربيس
+    database.collection('broker_requests').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+        allRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderBrokerRequests();
+    }, error => {
+        console.error("خطأ في جلب طلبات العملاء:", error);
+        const container = document.getElementById('broker-requests-container');
+        if (container) {
+            container.innerHTML = `<div class="col-span-full text-center py-10 text-red-400 text-xs font-bold">تعذر تحميل الطلبات. تحقق من صلاحيات القاعدة.</div>`;
+        }
+    });
+
+    // دالة عرض وتصفية الطلبات بناءً على التولبر والبحث
+    window.renderBrokerRequests = function() {
+        const container = document.getElementById('broker-requests-container');
+        const searchInput = document.getElementById('requests-search');
+        if (!container) return;
+
+        const query = searchInput ? searchInput.value.toLowerCase() : '';
+
+        // تصفية الطلبات حسب نوع المعاملة (resale أو premium) والبحث
+        const filtered = allRequests.filter(req => {
+            const reqFlow = req.flowType || 'resale';
+            const matchesFlow = (reqFlow === currentFlow);
+
+            const searchString = `${req.governorate || ''} ${req.city || ''} ${req.mainTypeName || ''} ${req.subType || ''} ${req.notes || ''}`.toLowerCase();
+            const matchesSearch = !query || searchString.includes(query);
+
+            return matchesFlow && matchesSearch;
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-full text-center py-12 bg-zinc-900/50 rounded-3xl border border-zinc-800/80 p-6 space-y-2">
+                    <i class="fa-solid fa-folder-open text-zinc-600 text-3xl"></i>
+                    <p class="text-xs text-zinc-400 font-bold">لا توجد طلبات عملاء متاحة حالياً في قسم (${currentFlow === 'resale' ? 'ريسيل' : 'بريميري'}).</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = filtered.map(req => {
+            const phone = req.phone || '';
+            const cleanPhone = phone.replace(/[^0-9+]/g, '');
+            const whatsappPhone = phone.replace(/[^0-9]/g, '');
+            const userId = req.userId || '';
+            const reqId = req.id || '';
+
+            // تنسيق التاريخ والوقت
+            let timeAgo = 'حديثاً';
+            if (req.createdAt && req.createdAt.toDate) {
+                const date = req.createdAt.toDate();
+                timeAgo = date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' }) + ' - ' + date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            return `
+                <div class="bg-zinc-900/90 border border-zinc-800/90 rounded-3xl p-4 md:p-5 shadow-xl flex flex-col justify-between transition hover:border-zinc-700 space-y-3">
+                    
+                    <!-- رأس الكارت والموقع والتاريخ -->
+                    <div class="flex justify-between items-start border-b border-zinc-800/80 pb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-black">
+                                <i class="fa-solid fa-user-tag"></i>
+                            </span>
+                            <div>
+                                <h3 class="text-xs md:text-sm font-black text-white">${req.mainTypeName || 'عقار'} (${req.subType || 'الكل'})</h3>
+                                <p class="text-[10px] text-zinc-400 mt-0.5 flex items-center gap-1">
+                                    <i class="fa-solid fa-location-dot text-red-500"></i>
+                                    ${req.governorate || 'مصر'} - ${req.city || 'الكل'}
+                                </p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-zinc-950 border border-zinc-800 px-2.5 py-1 rounded-xl text-zinc-400 font-bold">${timeAgo}</span>
+                    </div>
+
+                    <!-- تفاصيل السعر والمساحة -->
+                    <div class="grid grid-cols-2 gap-2 bg-zinc-950/80 p-3 rounded-2xl border border-zinc-800/80 text-[11px] font-bold">
+                        <div>
+                            <span class="text-zinc-500 block text-[9px] mb-0.5">نطاق السعر:</span>
+                            <span class="text-zinc-200">${req.minPrice || '0'} ⟵ ${req.maxPrice || 'غير محدود'} ج.م</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-500 block text-[9px] mb-0.5">المساحة المطلوبة:</span>
+                            <span class="text-zinc-200">${req.minArea || '0'} ⟵ ${req.maxArea || 'غير محدود'} م²</span>
+                        </div>
+                    </div>
+
+                    <!-- ملاحظات العميل إن وجدت -->
+                    ${req.notes ? `<p class="text-[11px] text-zinc-300 bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/50 leading-relaxed"><strong class="text-amber-400">ملاحظات العميل:</strong> ${req.notes}</p>` : ''}
+
+                    <!-- أزرار التواصل السريع (واتساب، محادثة المنصة، مكالمة) -->
+                    <div class="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800/80 mt-auto">
+                        
+                        <!-- واتساب -->
+                        <a href="https://wa.me/${whatsappPhone}" target="_blank" class="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-xl py-2 flex items-center justify-center gap-1.5 text-[11px] font-bold transition">
+                            <i class="fa-brands fa-whatsapp text-sm"></i>
+                            <span>واتساب</span>
+                        </a>
+
+                        <!-- محادثة أكارو Aqaro Chat -->
+                        <button onclick="if(typeof startAqaroChat === 'function') { startAqaroChat('${userId}', '${reqId}') } else { location.href='direct_chat.html?brokerId=${userId}&reqId=${reqId}' }" class="relative w-9 h-9 shrink-0 rounded-full bg-red-600/30 border border-red-500/50 backdrop-blur-md shadow-lg shadow-red-500/20 flex items-center justify-center hover:scale-105 active:scale-95 transition group" title="محادثة أكارو">
+                            <span class="absolute inset-0 rounded-full bg-red-500/30 animate-ping opacity-75"></span>
+                            <i class="fa-solid fa-comments text-red-400 group-hover:text-white transition relative z-10 text-xs"></i>
+                        </button>
+
+                        <!-- مكالمة هاتفيّة -->
+                        <a href="tel:${cleanPhone}" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700/80 rounded-xl py-2 flex items-center justify-center gap-1.5 text-[11px] font-bold transition">
+                            <i class="fa-solid fa-phone text-zinc-400 text-xs"></i>
+                            <span>مكالمة</span>
+                        </a>
+
+                    </div>
+
+                </div>`;
+        }).join('');
+    };
+})();
+</script>
+
+</body>
+</html>

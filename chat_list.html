@@ -1,0 +1,593 @@
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div id="inbox-container" class="animate-fadeIn pb-28 bg-[#0a0a0a] min-h-screen text-gray-100 font-sans selection:bg-red-500 selection:text-white" dir="rtl">
+    
+    <!-- حاوية عامة متجاوبة للتحكم في عرض الشاشات الكبيرة -->
+    <div class="max-w-4xl mx-auto w-full px-2 sm:px-4 py-4 md:py-8">
+
+        <!-- Header -->
+        <div class="p-4 md:p-6 border border-white/10 bg-[#0d0d0d]/90 backdrop-blur-2xl sticky top-0 z-30 shadow-2xl rounded-2xl md:rounded-3xl mb-4 md:mb-6">
+            <div class="flex justify-between items-center mb-4 md:mb-5">
+                <div class="flex items-center gap-3">
+                    <h1 class="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                        الدردشات النشطة
+                    </h1>
+                </div>
+                
+                <!-- Real Online Status Indicator -->
+                <div id="my-status" class="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-1.5 md:px-4 md:py-2 rounded-full backdrop-blur-md transition-all shadow-inner">
+                    <div class="relative flex items-center justify-center">
+                        <div class="w-2.5 h-2.5 md:w-3 md:h-3 bg-gray-500 rounded-full"></div>
+                    </div>
+                    <span class="text-[11px] md:text-xs text-gray-400 font-bold">جاري الاتصال...</span>
+                </div>
+            </div>
+            
+            <!-- Category Tabs -->
+            <div class="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1 pt-1">
+                <button onclick="filterByCat(event, 'all')" class="cat-tab active" id="tab-all">
+                    <i class="fa-solid fa-layer-group text-[10px] md:text-xs"></i> الكل
+                </button>
+                <div id="dynamic-tabs" class="flex gap-2.5"></div>
+                <button onclick="openCategoryDialog()" class="add-cat-btn" title="إضافة قسم جديد">
+                    <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat List Container -->
+        <div id="chats-list" class="flex flex-col gap-3 md:gap-3.5">
+            <div class="p-20 text-center"><div class="loader-mini"></div></div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .cat-tab { 
+        padding: 8px 16px; 
+        background: rgba(255, 255, 255, 0.03); 
+        border-radius: 14px; 
+        font-size: 12px; 
+        border: 1px solid rgba(255, 255, 255, 0.06); 
+        color: #a1a1aa; 
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+        flex-shrink: 0; 
+        font-weight: 700; 
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    @media (min-width: 768px) {
+        .cat-tab { padding: 10px 20px; font-size: 13px; border-radius: 16px; }
+    }
+    .cat-tab:hover { background: rgba(255, 255, 255, 0.08); color: #fff; border-color: rgba(255, 255, 255, 0.15); }
+    .cat-tab.active { 
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+        border-color: #ef4444; 
+        color: white; 
+        box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+    }
+    
+    .add-cat-btn {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border: 1px dashed rgba(239, 68, 68, 0.35);
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.25s ease;
+        cursor: pointer;
+    }
+    @media (min-width: 768px) {
+        .add-cat-btn { width: 42px; height: 42px; border-radius: 16px; }
+    }
+    .add-cat-btn:hover {
+        background: #ef4444;
+        color: #fff;
+        border-style: solid;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+        transform: translateY(-1px);
+    }
+
+    /* تعديل الكارت ليكون overflow visible لضمان ظهور القائمة بالكامل دون قص */
+    .chat-card {
+        background: rgba(13, 13, 13, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        transition: all 0.25s ease;
+        position: relative;
+        overflow: visible !important;
+    }
+    @media (min-width: 768px) {
+        .chat-card { border-radius: 24px; }
+    }
+    .chat-card:hover {
+        background: rgba(20, 20, 25, 0.9);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    
+    .pinned-card { 
+        border-right: 4px solid #ef4444; 
+        background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(13, 13, 13, 0.8) 60%) !important; 
+    }
+    
+    .online-dot { 
+        position: absolute; 
+        bottom: 2px; 
+        right: 2px; 
+        width: 12px; 
+        height: 12px; 
+        background: #10b981; 
+        border: 2px solid #0d0d0d; 
+        border-radius: 50%; 
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+    }
+    @media (min-width: 768px) {
+        .online-dot { width: 14px; height: 14px; bottom: 3px; right: 3px; border-width: 2.5px; }
+    }
+
+    /* قائمة المنسدلة الذكية والمضمونة الظهور */
+    .dropdown-menu {
+        position: absolute;
+        left: 12px;
+        top: 100%;
+        margin-top: 6px;
+        width: 195px;
+        background: #141419;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+        z-index: 999;
+        opacity: 0;
+        transform: scale(0.95) translateY(-8px);
+        pointer-events: none;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        overflow: hidden;
+    }
+    .dropdown-menu.show {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        pointer-events: auto;
+    }
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #d4d4d8;
+        transition: background 0.15s ease, color 0.15s ease;
+        cursor: pointer;
+        text-align: right;
+    }
+    .dropdown-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+    }
+    .dropdown-item.danger {
+        color: #f87171;
+    }
+    .dropdown-item.danger:hover {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+    }
+    
+    .loader-mini { 
+        width: 28px; 
+        height: 28px; 
+        border: 3px solid rgba(239, 68, 68, 0.2); 
+        border-top-color: #ef4444; 
+        border-radius: 50%; 
+        animation: spin 0.7s linear infinite; 
+        margin: 0 auto; 
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+(function() {
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    let currentFilter = 'all';
+    let heartbeatInterval = null;
+    let cachedCategories = ["عقارات", "عمل"];
+
+    const CustomSwal = Swal.mixin({
+        background: '#141419',
+        color: '#ffffff',
+        customClass: {
+            popup: 'rounded-2xl border border-white/10 shadow-2xl backdrop-blur-2xl',
+            title: 'text-base md:text-lg font-black text-white mb-1',
+            htmlContainer: 'text-xs md:text-sm text-gray-400 font-medium',
+            confirmButton: 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold py-2.5 px-5 rounded-xl text-xs md:text-sm shadow-lg transition-all ml-2',
+            cancelButton: 'bg-white/10 hover:bg-white/20 text-gray-300 font-bold py-2.5 px-5 rounded-xl text-xs md:text-sm transition-all',
+            input: 'bg-white/5 border border-white/10 rounded-xl text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 text-xs md:text-sm py-2.5 px-3.5 my-3'
+        },
+        buttonsStyling: false
+    });
+
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+        background: '#18181f',
+        color: '#fff',
+        customClass: {
+            popup: 'rounded-xl border border-white/10 shadow-2xl text-xs md:text-sm font-bold'
+        }
+    });
+
+    function setupMyPresence(user) {
+        if (!user) return;
+        const userRef = db.collection('users').doc(user.uid);
+        
+        const setStatus = (status) => {
+            userRef.set({
+                status: status,
+                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).catch(console.error);
+        };
+
+        setStatus('online');
+
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        heartbeatInterval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                setStatus('online');
+            }
+        }, 30000);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                setStatus('online');
+            } else {
+                setStatus('offline');
+            }
+        });
+
+        window.addEventListener('beforeunload', () => setStatus('offline'));
+        window.addEventListener('pagehide', () => setStatus('offline'));
+
+        userRef.onSnapshot(doc => {
+            const data = doc.data() || {};
+            const isOnline = data.status === 'online';
+            const statusContainer = document.getElementById('my-status');
+            
+            if (statusContainer) {
+                statusContainer.innerHTML = `
+                    <div class="relative flex items-center justify-center">
+                        <div class="w-2.5 h-2.5 md:w-3 md:h-3 ${isOnline ? 'bg-emerald-500' : 'bg-gray-500'} rounded-full"></div>
+                        ${isOnline ? '<div class="absolute w-2.5 h-2.5 md:w-3 md:h-3 bg-emerald-500 rounded-full animate-ping opacity-75"></div>' : ''}
+                    </div>
+                    <span class="text-[11px] md:text-xs ${isOnline ? 'text-emerald-400 font-bold' : 'text-gray-400 font-medium'}">
+                        ${isOnline ? 'متصل' : 'غير متصل'}
+                    </span>
+                `;
+            }
+        });
+    }
+
+    function initUserDataListener(user) {
+        db.collection('users').doc(user.uid).onSnapshot(doc => {
+            const data = doc.data() || {};
+            cachedCategories = data.categories || ["عقارات", "عمل"];
+            
+            if (!data.categories) {
+                db.collection('users').doc(user.uid).set({ categories: cachedCategories }, { merge: true });
+            }
+            
+            loadTabs();
+            loadChats();
+        });
+    }
+
+    window.openCategoryDialog = () => {
+        CustomSwal.fire({
+            title: '📂 إضافة قسم جديد',
+            html: 'أدخل اسم القسم لتصنيف ومتابعة دردشاتك بفعالية واحترافية',
+            input: 'text',
+            inputPlaceholder: 'مثال: العملاء الهامون، استفسارات...',
+            showCancelButton: true,
+            confirmButtonText: 'إضافة القسم',
+            cancelButtonText: 'إلغاء',
+            inputValidator: (value) => {
+                if (!value || !value.trim()) {
+                    return 'يرجى كتابة اسم القسم أولاً!';
+                }
+                if (cachedCategories.includes(value.trim())) {
+                    return 'هذا القسم موجود بالفعل!';
+                }
+            }
+        }).then(res => {
+            if (res.isConfirmed && res.value) {
+                const catName = res.value.trim();
+                const user = auth.currentUser;
+                if (!user) return;
+
+                db.collection('users').doc(user.uid).update({
+                    categories: firebase.firestore.FieldValue.arrayUnion(catName)
+                }).then(() => {
+                    Toast.fire({
+                        icon: 'success',
+                        title: `تمت إضافة قسم "${catName}" بنجاح`
+                    });
+                });
+            }
+        });
+    };
+
+    window.deleteCategory = (catName) => {
+        CustomSwal.fire({
+            title: `حذف قسم "${catName}"؟`,
+            html: 'سيتم حذف القسم من قاعدة البيانات مع بقاء المحادثات المرتبطة به.',
+            icon: 'warning',
+            iconColor: '#ef4444',
+            showCancelButton: true,
+            confirmButtonText: 'تأكيد الحذف',
+            cancelButtonText: 'تراجع'
+        }).then(res => {
+            if (res.isConfirmed) {
+                const user = auth.currentUser;
+                if (!user) return;
+
+                db.collection('users').doc(user.uid).update({
+                    categories: firebase.firestore.FieldValue.arrayRemove(catName)
+                }).then(() => {
+                    if (currentFilter === catName) currentFilter = 'all';
+                    Toast.fire({ icon: 'info', title: 'تم حذف القسم بنجاح' });
+                });
+            }
+        });
+    };
+
+    window.filterByCat = (e, cat) => {
+        currentFilter = cat;
+        document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+        if (e && e.currentTarget) e.currentTarget.classList.add('active');
+        loadChats();
+    };
+
+    function loadTabs() {
+        const container = document.getElementById('dynamic-tabs');
+        if (!container) return;
+
+        container.innerHTML = cachedCategories.map(c => 
+            `<button onclick="filterByCat(event, '${c}')" oncontextmenu="event.preventDefault(); deleteCategory('${c}')" class="cat-tab ${currentFilter === c ? 'active' : ''}">${c}</button>`
+        ).join('');
+    }
+
+    function loadChats() {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        db.collection("chats")
+            .where("participants", "array-contains", user.uid)
+            .onSnapshot(snap => {
+                const list = document.getElementById('chats-list');
+                if (!list) return;
+
+                let allDocs = [];
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if (currentFilter === 'all' || data.category === currentFilter) {
+                        allDocs.push({ id: doc.id, ...data });
+                    }
+                });
+
+                allDocs.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
+                if (allDocs.length === 0) {
+                    list.innerHTML = `
+                        <div class="p-16 md:p-20 text-center flex flex-col items-center justify-center bg-[#0d0d0d]/40 border border-white/5 rounded-2xl md:rounded-3xl">
+                            <div class="w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-2xl flex items-center justify-center text-gray-400 mb-4 border border-white/5 shadow-inner">
+                                <i class="fa-regular fa-comments text-2xl md:text-3xl"></i>
+                            </div>
+                            <p class="text-gray-300 font-bold text-sm md:text-base">لا توجد محادثات في هذا القسم</p>
+                            <span class="text-gray-500 text-xs md:text-sm mt-1">ستظهر المحادثات الجديدة هنا فور استلامها</span>
+                        </div>`;
+                    return;
+                }
+
+                let html = '';
+                allDocs.forEach(chat => {
+                    const otherUid = Array.isArray(chat.participants) 
+                        ? (chat.participants.find(id => id !== user.uid) || "") 
+                        : "";
+
+                    const otherFromNames = (Array.isArray(chat.names)) 
+                        ? chat.names.find(n => n && n.id !== user.uid) 
+                        : null;
+
+                    const other = otherFromNames || { 
+                        name: chat.partnerName || "مستخدم", 
+                        id: otherUid 
+                    };
+
+                    const isPinned = chat.isPinned || false;
+
+                    html += `
+                    <div class="chat-card ${isPinned ? 'pinned-card' : ''}">
+                        <!-- محتوى كارت الدردشة -->
+                        <div class="p-3.5 sm:p-4 md:p-5 flex items-center justify-between gap-3 sm:gap-4 cursor-pointer relative"
+                             onclick="window.location.href='direct_chat.html?chatId=${chat.id}&target=${other.id}&name=${encodeURIComponent(other.name)}'">
+                            
+                            <div class="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+                                <div class="relative flex-shrink-0">
+                                    <div class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-tr from-red-600/20 via-zinc-900 to-red-500/10 rounded-2xl flex items-center justify-center text-red-400 font-black text-base sm:text-lg md:text-xl border border-white/10 shadow-md">
+                                        ${other.name ? other.name[0].toUpperCase() : '?'}
+                                    </div>
+                                    <div id="status-${other.id}" class="hidden online-dot"></div>
+                                </div>
+
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between gap-2 mb-1">
+                                        <h3 class="text-xs sm:text-sm md:text-base font-bold text-gray-100 truncate flex items-center gap-2">
+                                            ${other.name}
+                                            ${isPinned ? '<span class="text-[9px] md:text-[10px] bg-red-500/20 text-red-400 font-bold px-2 py-0.5 rounded-md border border-red-500/30">مثبت</span>' : ''}
+                                        </h3>
+                                        <span id="status-text-${other.id}" class="text-[10px] md:text-xs text-gray-500 font-medium flex-shrink-0">غير متصل</span>
+                                    </div>
+                                    <p class="text-[11px] sm:text-xs md:text-sm text-gray-400 truncate font-medium leading-relaxed">${chat.lastMessage || 'ابدأ محادثة جديدة الآن...'}</p>
+                                </div>
+                            </div>
+
+                            <!-- زر القائمة المنسدلة الاحترافية -->
+                            <div class="relative flex-shrink-0" onclick="event.stopPropagation()">
+                                <button onclick="toggleDropdown('${chat.id}', event)" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 flex items-center justify-center transition">
+                                    <i class="fa-solid fa-ellipsis-vertical text-xs sm:text-sm"></i>
+                                </button>
+                                
+                                <!-- القائمة المنسدلة الواضحة والمرنة -->
+                                <div id="dropdown-${chat.id}" class="dropdown-menu">
+                                    <button onclick="togglePin('${chat.id}', ${isPinned})" class="dropdown-item">
+                                        <i class="fa-solid ${isPinned ? 'fa-thumbtack-slash' : 'fa-thumbtack'} w-4 text-center text-gray-400"></i>
+                                        <span>${isPinned ? 'إلغاء التثبيت' : 'تثبيت بالأعلى'}</span>
+                                    </button>
+                                    <button onclick="moveChatToCategory('${chat.id}')" class="dropdown-item">
+                                        <i class="fa-solid fa-folder-open w-4 text-center text-gray-400"></i>
+                                        <span>نقل لقسم</span>
+                                    </button>
+                                    <button onclick="confirmDelete('${chat.id}')" class="dropdown-item danger">
+                                        <i class="fa-solid fa-trash-can w-4 text-center"></i>
+                                        <span>حذف المحادثة</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>`;
+
+                    if(other.id) checkUserStatus(other.id);
+                });
+
+                list.innerHTML = html;
+            }, err => {
+                console.error("Firebase Error:", err);
+            });
+    }
+
+    window.toggleDropdown = (id, e) => {
+        e.stopPropagation();
+        const currentDropdown = document.getElementById('dropdown-' + id);
+        const isOpen = currentDropdown.classList.contains('show');
+
+        document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
+
+        if (!isOpen) {
+            currentDropdown.classList.add('show');
+        }
+    };
+
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
+    });
+
+    window.togglePin = (id, current) => {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
+        db.collection("chats").doc(id).update({ isPinned: !current })
+        .then(() => { 
+            Toast.fire({
+                icon: 'success',
+                title: !current ? 'تم تثبيت المحادثة في الأعلى' : 'تم إلغاء التثبيت'
+            });
+        });
+    };
+
+    window.moveChatToCategory = (chatId) => {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
+        const options = { 'all': 'الكل (بدون قسم محدد)' };
+        cachedCategories.forEach(c => options[c] = c);
+
+        CustomSwal.fire({
+            title: '📁 نقل إلى قسم',
+            html: 'اختر القسم المناسب لتنظيم هذه المحادثة:',
+            input: 'select',
+            inputOptions: options,
+            showCancelButton: true,
+            confirmButtonText: 'حفظ النقل',
+            cancelButtonText: 'إلغاء'
+        }).then(res => {
+            if(res.isConfirmed) {
+                const targetCat = res.value === 'all' ? '' : res.value;
+                db.collection("chats").doc(chatId).update({ category: targetCat })
+                .then(() => {
+                    Toast.fire({ icon: 'success', title: 'تم نقل المحادثة بنجاح' });
+                });
+            }
+        });
+    };
+
+    window.confirmDelete = (id) => {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
+        CustomSwal.fire({
+            title: 'حذف المحادثة نهائياً؟',
+            html: 'هل أنت متأكد من رغبتك في إزالة هذه المحادثة؟ لن تستطيع استرجاع رسائلها بعد الحذف.',
+            icon: 'warning',
+            iconColor: '#ef4444',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، حذف',
+            cancelButtonText: 'تراجع'
+        }).then(res => {
+            if(res.isConfirmed) {
+                db.collection("chats").doc(id).delete()
+                .then(() => {
+                    Toast.fire({ icon: 'success', title: 'تم حذف المحادثة بنجاح' });
+                });
+            }
+        });
+    };
+
+    function checkUserStatus(uid) {
+        db.collection('users').doc(uid).onSnapshot(doc => {
+            const dot = document.getElementById('status-' + uid);
+            const textEl = document.getElementById('status-text-' + uid);
+            
+            if (doc.exists) {
+                const data = doc.data();
+                const now = Date.now();
+                const lastSeenTime = data.lastSeen ? data.lastSeen.toDate().getTime() : 0;
+                
+                const isOnline = data.status === 'online' && (now - lastSeenTime < 90000);
+
+                if (isOnline) {
+                    if (dot) dot.classList.remove('hidden');
+                    if (textEl) {
+                        textEl.textContent = 'نشط الآن';
+                        textEl.className = 'text-[10px] md:text-xs text-emerald-400 font-bold';
+                    }
+                } else {
+                    if (dot) dot.classList.add('hidden');
+                    if (textEl) {
+                        textEl.textContent = 'غير متصل';
+                        textEl.className = 'text-[10px] md:text-xs text-gray-500 font-medium';
+                    }
+                }
+            }
+        });
+    }
+
+    auth.onAuthStateChanged(user => { 
+        if(user) {
+            setupMyPresence(user);
+            initUserDataListener(user);
+        } else {
+            document.getElementById('chats-list').innerHTML = '';
+        }
+    });
+})();
+</script>

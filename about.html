@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>من نحن | منصة أكارو العقارية</title>
+    
+    <!-- وسوم الـ SEO -->
+    <meta name="description" content="تعرف على منصة أكارو - المنصة الذكية الأولى في مصر لحماية السوق العقاري وجعله آمناً ومستقراً.">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; background: #0d0d0d; color: white; margin: 0; }
+    </style>
+</head>
+<body class="bg-[#0d0d0d] min-h-screen flex flex-col justify-between">
+
+    <!-- شريط معلومات التواصل العلوي -->
+    <div class="bg-[#141414] border-b border-[#262626] text-gray-400 text-xs py-2.5 px-6 md:px-12">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-6 flex-wrap">
+                <div class="flex items-center gap-2 hover:text-red-500 transition">
+                    <i class="fa-solid fa-phone text-red-500"></i>
+                    <span>+20 100 000 0000</span>
+                </div>
+                <div class="flex items-center gap-2 hover:text-red-500 transition">
+                    <i class="fa-solid fa-envelope text-red-500"></i>
+                    <span>support@aqaro.com</span>
+                </div>
+                <div class="flex items-center gap-2 hover:text-red-500 transition">
+                    <i class="fa-solid fa-location-dot text-red-500"></i>
+                    <span>القاهرة، مصر</span>
+                </div>
+            </div>
+            <div>
+                <span class="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full font-bold">المنصة العقارية الذكية</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- الهيدر الرئيسي -->
+    <header class="w-full h-[80px] bg-[#1a1a1a]/95 backdrop-blur-md border-b border-[#333] flex items-center justify-between px-6 md:px-12 sticky top-0 z-50">
+        <div class="flex items-center gap-3 cursor-pointer" onclick="location.href='index.html#home'">
+            <img src="https://i.ibb.co/fdnhVgjt/Picsart-26-10-01-00-34-44-917.png" class="w-10 h-10 rounded-xl object-cover">
+            <h1 class="text-xl font-black text-white">أكارو</h1>
+        </div>
+        <a href="index.html#home" class="bg-[#333] hover:bg-red-500 text-gray-300 hover:text-white px-5 py-2 rounded-full text-xs font-bold transition flex items-center gap-2">
+            <i class="fa-solid fa-arrow-right"></i> العودة للرئيسية
+        </a>
+    </header>
+
+    <!-- محتوى الصفحة -->
+    <main class="flex-1 max-w-5xl mx-auto px-6 py-12 w-full">
+        <!-- قسم العنوان الرئيسي -->
+        <div class="text-center mb-16">
+            <div class="inline-block p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-500 text-3xl mb-4">
+                <i class="fa-solid fa-building-shield"></i>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-black text-white mb-4">من نحن في منصة أكارو</h2>
+            <p class="text-gray-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                نحن لسنا مجرد منصة إعلانات عقارية تقليدية، بل الكيان التقني الأول المصمم لإحداث نقلة نوعية وجذرية في السوق العقاري المصري والعربي.
+            </p>
+        </div>
+
+        <!-- معلومات عن الشركة والأهداف والرؤية -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+            <!-- أهدافنا الكبرى -->
+            <div class="bg-[#1a1a1a] border border-[#333] p-8 rounded-3xl flex flex-col justify-between hover:border-red-500/40 transition">
+                <div>
+                    <div class="w-12 h-12 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center text-xl mb-6">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-white mb-3">هدفنا الأساسي: حماية السوق العقاري</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                        نسعى جاهدين لحماية السوق العقاري وجعله آمناً، شفافاً، وأكثر استقراراً للجميع. نقوم بالقضاء على الممارسات العشوائية وتوفير بيئة تواصل موثوقة تحمي حقوق المشترين والملاك والوسطاء المحترفين.
+                    </p>
+                </div>
+                <div class="border-t border-[#262626] pt-4 text-xs text-red-500 font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i> بيئة تداول عقاري آمنة وخالية من النصب
+                </div>
+            </div>
+
+            <!-- مهمتنا والطموح -->
+            <div class="bg-[#1a1a1a] border border-[#333] p-8 rounded-3xl flex flex-col justify-between hover:border-red-500/40 transition">
+                <div>
+                    <div class="w-12 h-12 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center text-xl mb-6">
+                        <i class="fa-solid fa-rocket"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-white mb-3">مهمتنا وطموحنا المستقبلي</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                        مهمتنا هي تمكين كل مستخدم من اتخاذ قرارات عقارية مبنية على بيانات دقيقة مدعومة بأحدث تقنيات الويب والريلز التفاعلية. طموحنا أن نكون المرجع التقني الأول في قطاع العقارات بالشرق الأوسط.
+                    </p>
+                </div>
+                <div class="border-t border-[#262626] pt-4 text-xs text-red-500 font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i> حلول ذكية ومتطورة تخدم المستثمر والباحث
+                </div>
+            </div>
+        </div>
+
+        <!-- قسم مميزات المنصة -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+            <div class="bg-[#1a1a1a]/60 border border-[#262626] p-6 rounded-2xl text-center">
+                <div class="text-red-500 text-2xl mb-3"><i class="fa-solid fa-bolt"></i></div>
+                <h4 class="font-bold text-white text-sm mb-1">سرعة وسهولة</h4>
+                <p class="text-gray-400 text-xs">إدارة وعرض العقارات بأعلى كفاءة رقمية.</p>
+            </div>
+            <div class="bg-[#1a1a1a]/60 border border-[#262626] p-6 rounded-2xl text-center">
+                <div class="text-red-500 text-2xl mb-3"><i class="fa-solid fa-clapperboard"></i></div>
+                <h4 class="font-bold text-white text-sm mb-1">ريلز عقارية</h4>
+                <p class="text-gray-400 text-xs">شاهد تفاصيل الوحدات وكأنك عاينتها بنفسك.</p>
+            </div>
+            <div class="bg-[#1a1a1a]/60 border border-[#262626] p-6 rounded-2xl text-center">
+                <div class="text-red-500 text-2xl mb-3"><i class="fa-solid fa-handshake"></i></div>
+                <h4 class="font-bold text-white text-sm mb-1">تواصل مباشر</h4>
+                <p class="text-gray-400 text-xs">تواصل فوري مع المالك أو الوسيط المعتمد.</p>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- قسم: مستقبلنا معاً (مخصص لأخبار وأحداث الشركة من الأدمن) -->
+        <!-- ========================================== -->
+        <section class="bg-gradient-to-b from-[#1a1a1a] to-[#121212] border border-[#333] rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+            
+            <div class="flex items-center justify-between mb-8 flex-wrap gap-4 border-b border-[#262626] pb-6">
+                <div>
+                    <span class="text-red-500 text-xs font-bold uppercase tracking-widest block mb-1">أحدث المستجدات</span>
+                    <h3 class="text-2xl md:text-3xl font-black text-white">مستقبلنا معاً 🚀</h3>
+                </div>
+                <p class="text-gray-400 text-xs max-w-xs leading-relaxed">تابع هنا أحدث الفعاليات، الإطلاقات، والأخبار الحصرية لشركة أكارو والتي يتم تحديثها دورياً.</p>
+            </div>
+
+            <!-- حاوية عرض المنشورات أو الأحداث القادمة من الفايرستور (لوحة الأدمن) -->
+            <div id="admin-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- يتم جلب البيانات تلقائياً برمجياً من مجموعة company_news في فايرستور -->
+                <div class="text-center py-10 text-gray-500 text-sm col-span-2">
+                    <i class="fa-solid fa-spinner animate-spin text-red-500 text-xl mb-2 block"></i>
+                    جاري تحميل أحدث أخبار وفعاليات الشركة...
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- الفوتر -->
+    <footer class="bg-[#1a1a1a] border-t border-[#333] py-6 text-center text-xs text-gray-500 mt-20">
+        © 2026 منصة أكارو العقارية. جميع الحقوق محفوظة.
+    </footer>
+
+    <!-- سكربت جلب أخبار "مستقبلنا معاً" ديناميكياً من فايرستور -->
+    <script>
+        (async function() {
+            const firebaseConfig = {
+                apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+                authDomain: "youssef-4170d.firebaseapp.com",
+                projectId: "youssef-4170d",
+                storageBucket: "youssef-4170d.appspot.com",
+                appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+            };
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+
+            const container = document.getElementById('admin-news-container');
+            if (!container) return;
+
+            try {
+                // جلب الأخبار مع تجنب الأخطاء في حال عدم وجود فهرس مركب (Index)
+                let snapshot;
+                try {
+                    snapshot = await db.collection('company_news').orderBy('timestamp', 'desc').get();
+                } catch (err) {
+                    // جلب عادي بدون ترتيب في حال تطلب الأمر فهرساً من فايرستور
+                    snapshot = await db.collection('company_news').get();
+                }
+                
+                if (snapshot.empty) {
+                    container.innerHTML = `
+                        <div class="col-span-2 text-center py-12 bg-[#141414] border border-[#262626] rounded-2xl">
+                            <i class="fa-solid fa-newspaper text-red-500/40 text-4xl mb-3"></i>
+                            <p class="text-gray-400 text-sm font-bold">ترقبوا قريباً أحدث أخبار وفعاليات شركة أكارو هنا!</p>
+                            <p class="text-gray-600 text-xs mt-1">سيتم نشر التحديثات والإنجازات المستقبلية تباعاً.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                snapshot.forEach(doc => {
+                    const item = doc.data();
+                    let dateStr = 'حديثاً';
+                    if (item.timestamp && typeof item.timestamp.toDate === 'function') {
+                        dateStr = new Date(item.timestamp.toDate()).toLocaleDateString('ar-EG');
+                    }
+                    
+                    html += `
+                        <div class="bg-[#141414] border border-[#262626] p-6 rounded-2xl hover:border-red-500/40 transition flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-xs text-red-500 bg-red-500/10 px-3 py-1 rounded-full font-bold">${item.category || 'خبر رسمي'}</span>
+                                    <span class="text-xs text-gray-500">${dateStr}</span>
+                                </div>
+                                <h4 class="text-lg font-bold text-white mb-2">${item.title || ''}</h4>
+                                <p class="text-gray-400 text-xs leading-relaxed mb-4">${item.description || ''}</p>
+                            </div>
+                            ${item.image ? `<img src="${item.image}" class="w-full h-40 object-cover rounded-xl mt-2 border border-[#262626]">` : ''}
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                console.error("خطأ في جلب الأخبار:", e);
+                container.innerHTML = `
+                    <div class="col-span-2 text-center py-10 bg-[#141414] border border-[#262626] rounded-2xl">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-3xl mb-2"></i>
+                        <p class="text-gray-400 text-xs">لا توجد أخبار منشورة حالياً في قسم مستقبلنا معاً.</p>
+                    </div>
+                `;
+            }
+        })();
+    </script>
+</body>
+</html>

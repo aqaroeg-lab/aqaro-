@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqaro | بوابة مالك العقار</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- مكتبة Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- مكتبة Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #0f0f0f; color: white; overflow-x: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .gradient-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: radial-gradient(circle at 15% 15%, rgba(239, 68, 68, 0.1) 0%, transparent 40%),
+                        radial-gradient(circle at 85% 85%, rgba(239, 68, 68, 0.07) 0%, transparent 40%);
+        }
+        .btn-premium {
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            transition: 0.3s;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-up { animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+    </style>
+</head>
+<body>
+
+    <div class="gradient-bg"></div>
+
+    <div class="max-w-md mx-auto min-h-screen flex flex-col p-6 justify-between">
+        
+        <!-- رأس الصفحة -->
+        <header class="flex items-center justify-between pt-4 animate-up">
+            <button onclick="window.location.href='index.html'" class="w-10 h-10 rounded-2xl glass flex items-center justify-center text-gray-400 hover:text-white transition">
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+            <div class="text-center">
+                <span class="text-[9px] text-red-500 font-bold uppercase tracking-[2px] block">بوابة الملاك</span>
+                <h1 class="text-xs font-black">Aqaro Landlord</h1>
+            </div>
+            <div class="w-10"></div> <!-- مساحة للتوازن -->
+        </header>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="my-8 animate-up" style="animation-delay: 0.1s;">
+            
+            <!-- أزرار التبديل (تسجيل دخول / حساب جديد) -->
+            <div class="flex bg-white/5 p-1.5 rounded-2xl mb-8 border border-white/5">
+                <button id="tab-register" onclick="switchTab('register')" class="flex-1 py-3 rounded-xl text-xs font-bold transition bg-red-600 text-white shadow-lg">حساب جديد</button>
+                <button id="tab-login" onclick="switchTab('login')" class="flex-1 py-3 rounded-xl text-xs font-bold transition text-gray-400 hover:text-white">تسجيل دخول</button>
+            </div>
+
+            <!-- نموذج التسجيل / الدخول -->
+            <form id="owner-auth-form" onsubmit="handleOwnerAuth(event)" class="space-y-4">
+                
+                <!-- حقل الاسم (يظهر فقط في التسجيل الجديد) -->
+                <div id="field-name" class="space-y-1.5">
+                    <label class="text-[11px] text-gray-400 font-bold block mr-2">الاسم الكامل</label>
+                    <div class="glass rounded-2xl flex items-center px-4 py-3.5 focus-within:border-red-500 transition">
+                        <i class="fa-regular fa-user text-gray-500 ml-3 text-sm"></i>
+                        <input type="text" id="owner-name" placeholder="أدخل اسمك الثلاثي" class="bg-transparent border-none outline-none text-xs w-full text-white placeholder-gray-600">
+                    </div>
+                </div>
+
+                <!-- البريد الإلكتروني -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] text-gray-400 font-bold block mr-2">البريد الإلكتروني</label>
+                    <div class="glass rounded-2xl flex items-center px-4 py-3.5 focus-within:border-red-500 transition">
+                        <i class="fa-regular fa-envelope text-gray-500 ml-3 text-sm"></i>
+                        <input type="email" id="owner-email" required placeholder="name@example.com" class="bg-transparent border-none outline-none text-xs w-full text-white placeholder-gray-600">
+                    </div>
+                </div>
+
+                <!-- كلمة المرور -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] text-gray-400 font-bold block mr-2">كلمة المرور</label>
+                    <div class="glass rounded-2xl flex items-center px-4 py-3.5 focus-within:border-red-500 transition">
+                        <i class="fa-regular fa-lock text-gray-500 ml-3 text-sm"></i>
+                        <input type="password" id="owner-password" required placeholder="••••••••" class="bg-transparent border-none outline-none text-xs w-full text-white placeholder-gray-600">
+                    </div>
+                </div>
+
+                <!-- تأكيد كلمة المرور (يظهر فقط في التسجيل الجديد) -->
+                <div id="field-confirm-pass" class="space-y-1.5">
+                    <label class="text-[11px] text-gray-400 font-bold block mr-2">تأكيد كلمة المرور</label>
+                    <div class="glass rounded-2xl flex items-center px-4 py-3.5 focus-within:border-red-500 transition">
+                        <i class="fa-regular fa-lock-keyhole text-gray-500 ml-3 text-sm"></i>
+                        <input type="password" id="owner-confirm-password" placeholder="••••••••" class="bg-transparent border-none outline-none text-xs w-full text-white placeholder-gray-600">
+                    </div>
+                </div>
+
+                <!-- قسم رفع البطاقة الشخصية (وش وظهر) - يظهر فقط في التسجيل الجديد -->
+                <div id="id-cards-section" class="space-y-3 pt-2">
+                    <label class="text-[11px] text-gray-400 font-bold block mr-2">صورة البطاقة الشخصية (للتحقق والأمان)</label>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- وجه البطاقة (وش) -->
+                        <label class="glass border border-dashed border-white/20 rounded-2xl p-4 text-center cursor-pointer hover:border-red-500 transition flex flex-col items-center justify-center h-28 relative overflow-hidden group">
+                            <input type="file" id="id-front" accept="image/*" class="hidden" onchange="previewImage(this, 'front-preview', 'front-text')">
+                            <img id="front-preview" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <div id="front-text" class="space-y-1">
+                                <i class="fa-solid fa-id-card text-red-500 text-lg mb-1"></i>
+                                <span class="block text-[10px] font-bold text-gray-300">وجه البطاقة (وش)</span>
+                                <span class="text-[9px] text-gray-500">اضغط للرفع</span>
+                            </div>
+                        </label>
+
+                        <!-- ظهر البطاقة (ظهر) -->
+                        <label class="glass border border-dashed border-white/20 rounded-2xl p-4 text-center cursor-pointer hover:border-red-500 transition flex flex-col items-center justify-center h-28 relative overflow-hidden group">
+                            <input type="file" id="id-back" accept="image/*" class="hidden" onchange="previewImage(this, 'back-preview', 'back-text')">
+                            <img id="back-preview" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <div id="back-text" class="space-y-1">
+                                <i class="fa-solid fa-id-card-clip text-red-500 text-lg mb-1"></i>
+                                <span class="block text-[10px] font-bold text-gray-300">ظهر البطاقة (ظهر)</span>
+                                <span class="text-[9px] text-gray-500">اضغط للرفع</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- رسالة الخطأ أو النجاح -->
+                <p id="auth-error-msg" class="text-center text-xs text-red-400 font-bold hidden pt-2"></p>
+
+                <!-- زر الإرسال -->
+                <div class="pt-4">
+                    <button type="submit" id="submit-btn" class="w-full py-4 rounded-2xl text-white font-black text-xs uppercase tracking-widest btn-premium shadow-lg shadow-red-600/20 active:scale-95 transition-all">
+                        إنشاء الحساب الآن
+                    </button>
+                </div>
+
+            </form>
+
+        </main>
+
+        <!-- تذييل الصفحة -->
+        <footer class="text-center pb-2 animate-up" style="animation-delay: 0.2s;">
+            <p class="text-[9px] text-gray-600 font-bold tracking-widest uppercase">
+                Aqaro Smart Landlord Portal © 2026
+            </p>
+        </footer>
+
+    </div>
+
+    <!-- السكريبت البرمجي للتحكم والربط -->
+    <script>
+        // إعدادات Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+            authDomain: "youssef-4170d.firebaseapp.com",
+            projectId: "youssef-4170d",
+            storageBucket: "youssef-4170d.appspot.com",
+            appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // إعدادات Supabase
+        const SUPABASE_URL = 'https://nzcunglhwdvpplycvefh.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_KPT6Q4n-kTmcY5fo9Hk8zw_4dpUoTp8';
+        let supabaseClient = null;
+        try {
+            if (window.supabase && window.supabase.createClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+            console.log("Supabase init note:", e);
+        }
+
+        let currentMode = 'register'; // register or login
+
+        function switchTab(mode) {
+            currentMode = mode;
+            const tabRegister = document.getElementById('tab-register');
+            const tabLogin = document.getElementById('tab-login');
+            const fieldName = document.getElementById('field-name');
+            const fieldConfirmPass = document.getElementById('field-confirm-pass');
+            const idCardsSection = document.getElementById('id-cards-section');
+            const submitBtn = document.getElementById('submit-btn');
+            const errorMsg = document.getElementById('auth-error-msg');
+
+            errorMsg.classList.add('hidden');
+
+            if (mode === 'register') {
+                tabRegister.className = "flex-1 py-3 rounded-xl text-xs font-bold transition bg-red-600 text-white shadow-lg";
+                tabLogin.className = "flex-1 py-3 rounded-xl text-xs font-bold transition text-gray-400 hover:text-white";
+                fieldName.classList.remove('hidden');
+                fieldConfirmPass.classList.remove('hidden');
+                idCardsSection.classList.remove('hidden');
+                submitBtn.innerText = "إنشاء الحساب الآن";
+            } else {
+                tabLogin.className = "flex-1 py-3 rounded-xl text-xs font-bold transition bg-red-600 text-white shadow-lg";
+                tabRegister.className = "flex-1 py-3 rounded-xl text-xs font-bold transition text-gray-400 hover:text-white";
+                fieldName.classList.add('hidden');
+                fieldConfirmPass.classList.add('hidden');
+                idCardsSection.classList.add('hidden');
+                submitBtn.innerText = "تسجيل الدخول";
+            }
+        }
+
+        // معاينة صور البطاقة عند اختيارها
+        function previewImage(input, previewId, textId) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById(previewId);
+                    const text = document.getElementById(textId);
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    text.classList.add('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // تنفيذ عملية التسجيل أو الدخول
+        async function handleOwnerAuth(event) {
+            event.preventDefault();
+            const email = document.getElementById('owner-email').value.trim();
+            const password = document.getElementById('owner-password').value.trim();
+            const errorMsg = document.getElementById('auth-error-msg');
+            errorMsg.classList.add('hidden');
+
+            const submitBtn = document.getElementById('submit-btn');
+            const originalText = submitBtn.innerText;
+            submitBtn.disabled = true;
+            submitBtn.innerText = "جاري المعالجة...";
+
+            try {
+                if (currentMode === 'register') {
+                    const name = document.getElementById('owner-name').value.trim();
+                    const confirmPassword = document.getElementById('owner-confirm-password').value.trim();
+                    const idFront = document.getElementById('id-front').files[0];
+                    const idBack = document.getElementById('id-back').files[0];
+
+                    if (!name) throw new Error("يرجى إدخال الاسم الكامل.");
+                    if (password !== confirmPassword) throw new Error("كلمتا المرور غير متطابقتين.");
+                    if (!idFront || !idBack) throw new Error("يرجى إرفاق وجهي البطاقة الشخصية (وش وظهر).");
+
+                    // 1. إنشاء الحساب في Firebase Auth
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                    const user = userCredential.user;
+
+                    // 2. رفع صور البطاقة إلى Supabase Storage (أو الاحتفاظ بها كرابط معالجة)
+                    let frontUrl = "";
+                    let backUrl = "";
+                    if (supabaseClient) {
+                        const fileExt1 = idFront.name.split('.').pop();
+                        const fileName1 = `owners_id/${user.uid}_front_${Date.now()}.${fileExt1}`;
+                        await supabaseClient.storage.from('aqaro-media').upload(fileName1, idFront);
+                        const { data: pubData1 } = supabaseClient.storage.from('aqaro-media').getPublicUrl(fileName1);
+                        frontUrl = pubData1.publicUrl;
+
+                        const fileExt2 = idBack.name.split('.').pop();
+                        const fileName2 = `owners_id/${user.uid}_back_${Date.now()}.${fileExt2}`;
+                        await supabaseClient.storage.from('aqaro-media').upload(fileName2, idBack);
+                        const { data: pubData2 } = supabaseClient.storage.from('aqaro-media').getPublicUrl(fileName2);
+                        backUrl = pubData2.publicUrl;
+                    }
+
+                    // 3. حفظ بيانات المالك في Firestore
+                    await db.collection('owners').doc(user.uid).set({
+                        uid: user.uid,
+                        name: name,
+                        email: email,
+                        idFrontUrl: frontUrl,
+                        idBackUrl: backUrl,
+                        role: 'owner',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    localStorage.setItem('user_status', 'logged_in');
+                    localStorage.setItem('user_role', 'owner');
+                    localStorage.setItem('owner_id', user.uid);
+
+                    alert("تم إنشاء حساب المالك بنجاح!");
+                    window.location.href = 'index.html'; // توجيه للوحة تحكم المالك
+
+                } else {
+                    // تسجيل الدخول
+                    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                    localStorage.setItem('user_status', 'logged_in');
+                    localStorage.setItem('user_role', 'owner');
+                    localStorage.setItem('owner_id', userCredential.user.uid);
+
+                    alert("مرحباً بعودتك!");
+                    window.location.href = 'owner-dashboard.html';
+                }
+
+            } catch (err) {
+                console.error(err);
+                errorMsg.innerText = err.message || "حدث خطأ أثناء العملية، يرجى المحاولة مرة أخرى.";
+                errorMsg.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AQARO NEWS - Real Estate Intelligence</title>
+    <!-- تضمين مكتبة Tailwind CSS عبر CDN لحل مشكلة التنسيقات المفقودة -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة FontAwesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- مكتبة Firebase لإدارة قاعدة البيانات والتحقق -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- مكتبة Supabase للتكامل السحابي الثنائي -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; background-color: #09090b; color: #f4f4f5; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 antialiased selection:bg-red-600 selection:text-white">
+
+    <!-- حاوية الصفحة المستقلة الكاملة -->
+    <div class="max-w-md mx-auto min-h-screen bg-zinc-950 text-zinc-100 pb-16 relative shadow-2xl border-x border-zinc-900/80">
+        
+        <!-- رأس الصفحة الاحترافي مع الشعار -->
+        <header class="sticky top-0 z-50 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-900 px-5 py-4 flex justify-between items-center shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 to-orange-500 p-0.5 shadow-lg shadow-red-600/20">
+                    <div class="w-full h-full bg-zinc-950 rounded-[14px] flex items-center justify-center">
+                        <i class="fa-solid fa-chart-line text-red-500 text-sm"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="text-xs font-black tracking-wider text-white">AQARO NEWS</h1>
+                    <p class="text-[9px] text-zinc-400 font-medium">Real Estate Intelligence</p>
+                </div>
+            </div>
+            <!-- زر العودة للرئيسية -->
+            <button type="button" onclick="window.location.href='index.html'" class="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        </header>
+
+        <!-- شريط الأخبار العاجلة المتحكم به من لوحة الإدارة (Ticker) -->
+        <div class="bg-gradient-to-r from-red-600/15 via-zinc-900 to-red-600/15 border-y border-red-500/20 px-4 py-2.5 flex items-center gap-3 overflow-hidden shadow-inner">
+            <div class="flex items-center gap-1.5 bg-red-600 text-white text-[9px] font-black px-2.5 py-1 rounded-lg shrink-0 shadow-md shadow-red-600/30">
+                <i class="fa-solid fa-bolt-lightning animate-pulse"></i>
+                <span>عاجل</span>
+            </div>
+            <div class="whitespace-nowrap overflow-x-auto hide-scrollbar text-[11px] text-zinc-300 font-medium">
+                <span id="breaking-ticker-text">جاري تحميل الأخبار العاجلة من لوحة التحكم...</span>
+            </div>
+        </div>
+
+        <!-- المحتوى الرئيسي (عرض الصفحة الرئيسية للأخبار) -->
+        <main id="news-main-view" class="p-4 space-y-5">
+
+            <!-- مؤشرات السوق السريعة (تتحكم بها لوحة الإدارة بالكامل) -->
+            <div class="grid grid-cols-3 gap-2.5">
+                <div class="bg-zinc-900/80 border border-zinc-800/80 p-3 rounded-2xl text-center shadow-lg">
+                    <span id="kpi-growth" class="block text-xs font-black text-red-400 mb-1">--</span>
+                    <span class="text-[10px] text-zinc-400 font-semibold leading-tight">معدل النمو السنوي</span>
+                </div>
+                <div class="bg-zinc-900/80 border border-zinc-800/80 p-3 rounded-2xl text-center shadow-lg">
+                    <span id="kpi-rental" class="block text-xs font-black text-emerald-400 mb-1">--</span>
+                    <span class="text-[10px] text-zinc-400 font-semibold leading-tight">عائد الإيجار المتوقع</span>
+                </div>
+                <div class="bg-zinc-900/80 border border-zinc-800/80 p-3 rounded-2xl text-center shadow-lg">
+                    <span id="kpi-hedge" class="block text-xs font-black text-blue-400 mb-1">--</span>
+                    <span class="text-[10px] text-zinc-400 font-semibold leading-tight">الحماية ضد التضخم</span>
+                </div>
+            </div>
+
+            <!-- تصنيفات الأخبار الديناميكية (تحكم كامل من الإدارة) -->
+            <div id="categories-filter-container" class="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                <button type="button" onclick="filterNews('الكل', event)" class="category-btn px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-bold shrink-0 shadow-lg shadow-red-600/25 transition">الكل</button>
+            </div>
+
+            <!-- حاوية الأخبار والمقالات القادمة من قواعد البيانات -->
+            <div id="real-estate-news-container" class="space-y-4">
+                <div class="bg-zinc-900/50 border border-zinc-800/80 p-6 rounded-3xl text-center space-y-2">
+                    <i class="fa-solid fa-spinner animate-spin text-red-500 text-xl"></i>
+                    <p class="text-xs text-zinc-400">جاري جلب المنشورات والأخبار الحقيقية...</p>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- صفحة تفاصيل الخبر الكاملة (تفتح عند النقر على أي مقال) -->
+        <div id="news-detail-view" class="hidden p-4 space-y-4 animate-fade-in">
+            <button type="button" onclick="backToNewsHome()" class="flex items-center gap-2 text-xs font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-3.5 py-2 rounded-xl transition hover:bg-red-500/20">
+                <i class="fa-solid fa-arrow-right"></i>
+                <span>العودة لقائمة الأخبار</span>
+            </button>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl space-y-4 pb-5">
+                <div class="h-56 relative overflow-hidden bg-zinc-800">
+                    <img id="detail-image" src="" class="w-full h-full object-cover" alt="Article Image">
+                    <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent"></div>
+                    <span id="detail-category" class="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow"></span>
+                </div>
+                
+                <div class="px-4 space-y-3">
+                    <div class="flex justify-between items-center text-[10px] text-zinc-400 border-b border-zinc-800 pb-2">
+                        <span><i class="fa-regular fa-user ml-1"></i> <span id="detail-author"></span></span>
+                        <span><i class="fa-regular fa-clock ml-1"></i> <span id="detail-date"></span></span>
+                    </div>
+
+                    <h1 id="detail-title" class="text-base font-black text-white leading-snug"></h1>
+                    
+                    <!-- نص المقال الكامل -->
+                    <div id="detail-content" class="text-xs text-zinc-300 leading-relaxed whitespace-pre-line pt-2"></div>
+
+                    <!-- مصدر الخبر المخصص -->
+                    <div class="pt-4 mt-4 border-t border-zinc-800/80 flex items-center justify-between bg-black/40 p-3 rounded-2xl border border-white/5">
+                        <span class="text-[10px] text-zinc-400 font-semibold"><i class="fa-solid fa-link ml-1 text-red-500"></i> مصدر الخبر:</span>
+                        <span id="detail-source" class="text-[11px] font-bold text-white bg-zinc-800 px-3 py-1 rounded-xl"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- كود JavaScript مع إمكانيات الجلب الديناميكي والربط السحابي -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+            authDomain: "youssef-4170d.firebaseapp.com",
+            projectId: "youssef-4170d",
+            storageBucket: "youssef-4170d.appspot.com",
+            appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const SUPABASE_URL = 'https://nzcunglhwdvpplycvefh.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_KPT6Q4n-kTmcY5fo9Hk8zw_4dpUoTp8';
+        const BUCKET_NAME = 'aqaro-media';
+
+        let supabaseClient = null;
+        try {
+            if (window.supabase && window.supabase.createClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+            console.log("Supabase initialization note:", e);
+        }
+
+        let allNewsItems = [];
+
+        async function fetchAdminSettings() {
+            try {
+                const docRef = db.collection('admin_settings').doc('news_config');
+                const docSnap = await docRef.get();
+                if (docSnap.exists) {
+                    updateHeaderSettings(docSnap.data());
+                    return;
+                }
+
+                if (supabaseClient) {
+                    const { data, error } = await supabaseClient.from('admin_settings').select('*').eq('id', 'news_config').single();
+                    if (!error && data) {
+                        updateHeaderSettings(data);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.log("استخدام القيم الافتراضية لحين ضبطها من لوحة الإدارة");
+            }
+
+            updateHeaderSettings({
+                growthRate: "+14.2%",
+                rentalYield: "8.5%",
+                inflationHedge: "تحوط تام",
+                breakingNews: "أهلاً بك في منصة AQARO NEWS - تابع أحدث المستجدات العقارية الموثوقة."
+            });
+        }
+
+        function updateHeaderSettings(config) {
+            const growthEl = document.getElementById('kpi-growth');
+            const rentalEl = document.getElementById('kpi-rental');
+            const hedgeEl = document.getElementById('kpi-hedge');
+            const tickerEl = document.getElementById('breaking-ticker-text');
+
+            if (growthEl) growthEl.innerText = config.growthRate || "+14.2%";
+            if (rentalEl) rentalEl.innerText = config.rentalYield || "8.5%";
+            if (hedgeEl) hedgeEl.innerText = config.inflationHedge || "تحوط تام";
+            if (tickerEl) tickerEl.innerText = config.breakingNews || "لا توجد تنبيهات عاجلة حالياً.";
+        }
+
+        async function fetchRealEstateNews() {
+            const container = document.getElementById('real-estate-news-container');
+            let fetchedArticles = [];
+
+            try {
+                try {
+                    const snapshot = await db.collection('real_estate_news').orderBy('createdAt', 'desc').get();
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        fetchedArticles.push({
+                            id: doc.id,
+                            sourceDb: 'firebase',
+                            title: data.title,
+                            category: data.category || 'عام',
+                            summary: data.summary,
+                            fullContent: data.fullContent || data.full_content || data.summary,
+                            imageUrl: data.imageUrl || data.image_url || '',
+                            isFeatured: data.isFeatured === true || data.isFeatured === 'true' || data.is_featured === true,
+                            newsSource: data.newsSource || data.news_source || 'فريق أبحاث أكارو',
+                            dateText: data.dateText || data.date_text || 'حديثاً',
+                            author: data.author || 'إدارة المنصة'
+                        });
+                    });
+                } catch (fbErr) {
+                    console.log("Firebase news fetch note:", fbErr);
+                }
+
+                if (supabaseClient) {
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('real_estate_news')
+                            .select('*')
+                            .order('created_at', { ascending: false });
+                        
+                        if (!error && data) {
+                            data.forEach(item => {
+                                if (!fetchedArticles.some(a => String(a.id) === String(item.id))) {
+                                    fetchedArticles.push({
+                                        id: item.id,
+                                        sourceDb: 'supabase',
+                                        title: item.title,
+                                        category: item.category || 'عام',
+                                        summary: item.summary,
+                                        fullContent: item.full_content || item.summary,
+                                        imageUrl: item.image_url || '',
+                                        isFeatured: item.is_featured === true || item.is_featured === 'true',
+                                        newsSource: item.news_source || 'فريق أبحاث أكارو',
+                                        dateText: item.date_text || 'حديثاً',
+                                        author: item.author || 'إدارة المنصة'
+                                    });
+                                }
+                            });
+                        }
+                    } catch (supErr) {
+                        console.log("Supabase news fetch note:", supErr);
+                    }
+                }
+
+                allNewsItems = fetchedArticles;
+                buildDynamicCategories(allNewsItems);
+                renderNewsList(allNewsItems);
+
+            } catch (err) {
+                console.error("خطأ في جلب الأخبار:", err);
+                if (container) {
+                    container.innerHTML = '<div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl text-center text-xs text-red-400">لا توجد أخبار منشورة حالياً. يرجى إضافتها من لوحة تحكم الأدمن.</div>';
+                }
+            }
+        }
+
+        function buildDynamicCategories(items) {
+            const categoriesContainer = document.getElementById('categories-filter-container');
+            if (!categoriesContainer) return;
+
+            let categories = ['الكل'];
+
+            items.forEach(item => {
+                if (item.category && !categories.includes(item.category)) {
+                    categories.push(item.category);
+                }
+            });
+
+            categoriesContainer.innerHTML = '';
+            categories.forEach((cat, index) => {
+                const isActive = index === 0 ? 'bg-red-600 text-white shadow-lg shadow-red-600/25' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-zinc-700';
+                categoriesContainer.innerHTML += `
+                    <button type="button" onclick="filterNews('${cat}', event)" class="category-btn px-4 py-2 rounded-xl text-xs font-bold shrink-0 transition ${isActive}">${cat}</button>
+                `;
+            });
+        }
+
+        function renderNewsList(items) {
+            const container = document.getElementById('real-estate-news-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (items.length === 0) {
+                container.innerHTML = '<div class="bg-zinc-900 p-8 rounded-3xl text-center text-xs text-zinc-500 border border-zinc-800">لا توجد أي أخبار أو مقالات منشورة حالياً. ابدأ بإضافتها من لوحة تحكم الأدمن.</div>';
+                return;
+            }
+
+            let featuredIndex = items.findIndex(item => item.isFeatured === true);
+            if (featuredIndex === -1) featuredIndex = 0;
+
+            const featured = items[featuredIndex];
+
+            if (featured && featured.imageUrl) {
+                container.innerHTML += `
+                    <div class="bg-zinc-900 border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl transition hover:border-zinc-700">
+                        <div class="h-48 relative overflow-hidden bg-zinc-800">
+                            <img src="${featured.imageUrl}" class="w-full h-full object-cover transform hover:scale-105 transition duration-500" alt="News Image">
+                            <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent"></div>
+                            <span class="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">مقال رئيسي مميز</span>
+                        </div>
+                        <div class="p-4 space-y-2.5">
+                            <div class="flex justify-between items-center text-[10px] text-zinc-400">
+                                <span><i class="fa-regular fa-user ml-1"></i> ${featured.author || 'الإدارة'}</span>
+                                <span><i class="fa-regular fa-clock ml-1"></i> ${featured.dateText || ''}</span>
+                            </div>
+                            <h2 class="text-sm font-black text-white leading-snug">
+                                ${featured.title}
+                            </h2>
+                            <p class="text-[11px] text-zinc-400 leading-relaxed line-clamp-2">
+                                ${featured.summary}
+                            </p>
+                            <button type="button" onclick="openNewsDetail('${featured.id}')" class="w-full mt-2 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition shadow-lg shadow-red-600/20 flex items-center justify-center gap-2">
+                                <span>قراءة المقال كاملاً</span>
+                                <i class="fa-solid fa-arrow-left text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let subItemsHtml = '<div class="space-y-3 pt-2">';
+            let hasSubItems = false;
+
+            items.forEach((item, index) => {
+                if (index !== featuredIndex) {
+                    hasSubItems = true;
+                    subItemsHtml += `
+                        <div class="bg-zinc-900/70 border border-zinc-800/80 p-3.5 rounded-2xl flex gap-3.5 items-center hover:border-zinc-700 transition cursor-pointer" onclick="openNewsDetail('${item.id}')">
+                            <div class="w-20 h-20 rounded-xl bg-zinc-800 shrink-0 overflow-hidden relative">
+                                <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=400&q=80'}" class="w-full h-full object-cover" alt="Thumb">
+                            </div>
+                            <div class="space-y-1.5 flex-1 min-w-0">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[9px] text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/20">${item.category}</span>
+                                    <span class="text-[9px] text-zinc-500">${item.dateText || ''}</span>
+                                </div>
+                                <h3 class="text-xs font-bold text-white line-clamp-1">${item.title}</h3>
+                                <p class="text-[10px] text-zinc-400 line-clamp-1">${item.summary}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            subItemsHtml += '</div>';
+
+            if (hasSubItems) {
+                container.innerHTML += subItemsHtml;
+            }
+        }
+
+        function filterNews(category, event) {
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('bg-red-600', 'text-white', 'shadow-lg', 'shadow-red-600/25');
+                btn.classList.add('bg-zinc-900', 'border', 'border-zinc-800', 'text-zinc-400');
+            });
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.remove('bg-zinc-900', 'border', 'border-zinc-800', 'text-zinc-400');
+                event.currentTarget.classList.add('bg-red-600', 'text-white', 'shadow-lg', 'shadow-red-600/25');
+            }
+
+            if (category === 'الكل') {
+                renderNewsList(allNewsItems);
+            } else {
+                const filtered = allNewsItems.filter(item => item.category === category);
+                renderNewsList(filtered);
+            }
+        }
+
+        function openNewsDetail(articleId) {
+            const article = allNewsItems.find(a => String(a.id) === String(articleId));
+            if (!article) return;
+
+            document.getElementById('detail-image').src = article.imageUrl || '';
+            document.getElementById('detail-category').innerText = article.category || 'عام';
+            document.getElementById('detail-author').innerText = article.author || 'إدارة المنصة';
+            document.getElementById('detail-date').innerText = article.dateText || '';
+            document.getElementById('detail-title').innerText = article.title;
+            document.getElementById('detail-content').innerText = article.fullContent || article.summary;
+            document.getElementById('detail-source').innerText = article.newsSource || 'فريق أبحاث أكارو';
+
+            document.getElementById('news-main-view').classList.add('hidden');
+            document.getElementById('news-detail-view').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function backToNewsHome() {
+            document.getElementById('news-detail-view').classList.hidden = true;
+            document.getElementById('news-detail-view').classList.add('hidden');
+            document.getElementById('news-main-view').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAdminSettings();
+            fetchRealEstateNews();
+        });
+    </script>
+</body>
+</html>

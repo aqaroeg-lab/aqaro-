@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل العقار | Aqaro Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 Pro -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts - Cairo -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
+    <!-- Swiper.js Slider CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <!-- Fancybox Lightbox CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #09090b !important;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .swiper-pagination-fraction {
+            color: #ffffff !important;
+            background: rgba(18, 18, 24, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+            padding: 4px 14px;
+            font-size: 11px;
+            font-weight: 800;
+            width: auto !important;
+            left: 16px !important;
+            bottom: 16px !important;
+            right: auto !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        .fancybox__container {
+            --fancybox-bg: rgba(5, 5, 8, 0.98);
+            --fancybox-color: #ffffff;
+            z-index: 3000;
+        }
+        #report-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            z-index: 4000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body class="pb-36 select-none">
+
+    <!-- Header Slider Gallery -->
+    <div class="relative w-full h-[420px] bg-zinc-950 overflow-hidden border-b border-white/10">
+        <div class="swiper mySwiper w-full h-full">
+            <div class="swiper-wrapper" id="p-slider">
+                <div class="swiper-slide bg-zinc-900 animate-pulse flex items-center justify-center text-zinc-500 text-xs font-semibold">
+                    جاري تحميل معرض الصور من قاعدة البيانات...
+                </div>
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+
+        <!-- Top Control Buttons Bar -->
+        <div class="absolute top-4 inset-x-4 flex items-center justify-between z-20 pointer-events-none">
+            <button onclick="window.history.length > 1 ? window.history.back() : window.location.href='index.html'" class="pointer-events-auto bg-zinc-900/80 hover:bg-zinc-800 text-white w-11 h-11 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/15 shadow-xl active:scale-90 transition">
+                <i class="fa-solid fa-arrow-right text-lg"></i>
+            </button>
+
+            <div class="flex items-center gap-2 pointer-events-auto">
+                <button onclick="shareProperty()" class="bg-zinc-900/80 hover:bg-zinc-800 text-white w-11 h-11 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/15 shadow-xl active:scale-90 transition" title="مشاركة">
+                    <i class="fa-solid fa-share-nodes text-sm"></i>
+                </button>
+                <button id="fav-btn" onclick="toggleFavorite()" class="bg-zinc-900/80 hover:bg-zinc-800 text-white w-11 h-11 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/15 shadow-xl active:scale-90 transition" title="المفضلة">
+                    <i id="fav-icon" class="fa-regular fa-heart text-lg"></i>
+                </button>
+                <button onclick="openReportModal()" class="bg-zinc-900/80 hover:bg-red-500/20 text-zinc-300 hover:text-red-400 border border-white/15 hover:border-red-500/30 px-3.5 py-2.5 rounded-2xl text-[11px] font-bold backdrop-blur-xl active:scale-95 transition flex items-center gap-1.5 shadow-xl">
+                    <i class="fa-solid fa-triangle-exclamation text-xs"></i> إبلاغ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="px-5 pt-6 space-y-6">
+
+        <!-- Header Info -->
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-baseline gap-2">
+                    <span id="p-price" class="text-3xl font-black text-white tracking-tight">0</span>
+                    <span id="p-currency" class="text-xs font-extrabold text-zinc-400 uppercase tracking-wider">جنيه مصري</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="p-badge" class="hidden px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-black rounded-xl">مميز</span>
+                    <div class="flex items-center gap-1.5 bg-zinc-900/90 border border-white/10 px-3 py-1.5 rounded-xl text-[11px] text-zinc-300 font-bold shadow-md">
+                        <i class="fa-solid fa-eye text-cyan-400"></i>
+                        <span id="p-views">0</span> مشاهدة
+                    </div>
+                </div>
+            </div>
+            
+            <h1 id="p-title" class="text-xl font-bold text-white leading-snug tracking-wide">جاري جلب تفاصيل العقار...</h1>
+            
+            <div class="flex items-center justify-between text-zinc-400 text-xs font-medium pt-1">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-location-dot text-cyan-400"></i>
+                    <span id="p-location">جاري تحديد الموقع...</span>
+                </div>
+                <span id="p-date-ago" class="text-[10px] text-zinc-500 font-bold">--</span>
+            </div>
+        </div>
+
+        <!-- Dynamic Smart Specs Grid (تم توليدها كلياً من قاعدة البيانات) -->
+        <div id="specs-wrapper" class="grid grid-cols-3 gap-3">
+            <!-- سيتم ملؤها برمجياً حسب نوع العقار وحقول الفايربيس -->
+        </div>
+
+        <!-- Additional Custom Structured Specs (المواصفات الإضافية المخصصة) -->
+        <div id="dynamic-specs-section" class="hidden bg-[#121218] p-4 rounded-2xl border border-white/10 shadow-lg space-y-3">
+            <h3 class="text-xs font-black text-white flex items-center gap-2 border-b border-white/10 pb-2.5">
+                <i class="fa-solid fa-list-check text-cyan-400 text-xs"></i>
+                تفاصيل وتجهيزات إضافية
+            </h3>
+            <div id="specs-grid" class="grid grid-cols-2 gap-2.5"></div>
+        </div>
+
+        <!-- Property Description -->
+        <div class="bg-[#121218] p-5 rounded-2xl border border-white/10 shadow-md">
+            <h3 class="text-xs font-extrabold text-white mb-3 flex items-center gap-2 border-b border-white/10 pb-2">
+                <i class="fa-solid fa-align-right text-cyan-400 text-xs"></i> التفاصيل والوصف:
+            </h3>
+            <p id="p-desc" class="text-xs text-zinc-300 leading-relaxed font-normal whitespace-pre-line">جاري تحميل الوصف...</p>
+        </div>
+
+        <!-- Documents & Attachments Section -->
+        <div id="attachments-section" class="hidden space-y-3">
+            <h3 class="text-xs font-black text-white px-1">المستندات والملفات المرفقة:</h3>
+            
+            <a id="pdf-btn" href="#" target="_blank" class="hidden w-full bg-[#121218] hover:bg-zinc-800/80 border border-white/10 hover:border-cyan-500/40 p-4 rounded-2xl flex items-center justify-between transition group">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center text-red-400 shrink-0 border border-red-500/20">
+                        <i class="fa-solid fa-file-pdf text-lg"></i>
+                    </div>
+                    <div class="text-right">
+                        <h4 class="text-xs font-bold text-white">بروشور العقار التفصيلي (PDF)</h4>
+                        <p class="text-[10px] text-zinc-400 mt-0.5">اضغط لمطالعة أو تحميل الملف الرسمي</p>
+                    </div>
+                </div>
+                <i class="fa-solid fa-arrow-up-right-from-square text-zinc-400 group-hover:text-white text-xs transition"></i>
+            </a>
+
+            <div id="masterplan-box" class="hidden bg-[#121218] p-3.5 rounded-2xl border border-white/10">
+                <p class="text-[11px] text-zinc-300 font-bold mb-2.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-map-location-dot text-cyan-400"></i> الماستر بلان والمسقط الأفقي
+                </p>
+                <a id="masterplan-link" data-fancybox="masterplan" href="#">
+                    <img id="masterplan-img" src="" class="w-full h-48 object-cover rounded-xl border border-white/10 cursor-pointer hover:opacity-90 transition">
+                </a>
+            </div>
+        </div>
+
+        <!-- Broker Info Card -->
+        <div>
+            <p class="text-[11px] text-zinc-400 font-bold mb-2 px-1">الوسيط العقاري أو المعلن</p>
+            <div id="broker-section" class="flex items-center gap-4 bg-[#121218] p-4 rounded-2xl border border-white/10 hover:border-white/20 transition cursor-pointer shadow-lg">
+                <img id="b-img" src="https://via.placeholder.com/60" class="w-12 h-12 rounded-full object-cover border-2 border-white/20 shrink-0">
+                <div class="flex-1 min-w-0">
+                    <h4 id="b-name" class="text-xs font-black text-white truncate">جاري جلب بيانات المعلن...</h4>
+                    <p id="b-date" class="text-[10px] text-zinc-400 mt-0.5 truncate">عضو معتمد لدى المنصة</p>
+                </div>
+                <i class="fa-solid fa-chevron-left text-zinc-500 text-xs"></i>
+            </div>
+        </div>
+
+        <!-- Related Listings Section -->
+        <div id="related-section" class="hidden pt-6 border-t border-white/10 space-y-4">
+            <h3 class="text-sm font-black text-white flex items-center justify-between">
+                <span>عقارات مشابهة قد تعجبك</span>
+                <span class="text-[10px] text-zinc-400 font-normal">من نفس التصنيف</span>
+            </h3>
+            <div id="suggest-grid" class="grid grid-cols-2 gap-3"></div>
+        </div>
+
+        <!-- Safety Guidelines -->
+        <div class="bg-[#121218] border border-white/10 rounded-2xl p-4 space-y-3 shadow-lg">
+            <h3 class="text-xs font-black text-white flex items-center gap-2 border-b border-white/10 pb-2.5">
+                <i class="fa-solid fa-shield-halved text-cyan-400 text-sm"></i>
+                نصائح لسلامتك
+            </h3>
+            <ul class="space-y-2.5 text-[11px] text-zinc-300 font-medium leading-snug">
+                <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-white shrink-0 mt-1.5"></span><span>قابل البائع في أماكن عامة واصطحب مرافقاً معك.</span></li>
+                <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-white shrink-0 mt-1.5"></span><span>عاين العقار والمستندات الرسمية بدقة قبل دفع أي مبالغ.</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Bottom Sticky Control Bar -->
+    <div class="fixed bottom-0 inset-x-0 p-3 bg-[#09090b]/90 backdrop-blur-2xl border-t border-white/10 flex items-center justify-between gap-3 z-50 shadow-2xl">
+        <button id="call-btn" class="flex-1 bg-[#16161e] hover:bg-zinc-800 border border-white/15 text-white h-13 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition">
+            <i class="fa-solid fa-phone text-xs text-zinc-300"></i> مكالمة
+        </button>
+
+        <button id="chat-btn" class="w-14 h-14 rounded-full bg-zinc-900/85 backdrop-blur-xl border border-white/15 text-zinc-300 flex flex-col items-center justify-center font-bold text-[9px] shadow-2xl active:scale-90 transition shrink-0 -mt-6">
+            <i class="fa-solid fa-comments text-base mb-0.5 text-zinc-300"></i>
+            <span class="tracking-tighter text-zinc-300">دردشة</span>
+        </button>
+
+        <button id="wa-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white h-13 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 active:scale-95 transition">
+            <i class="fa-brands fa-whatsapp text-base"></i> واتساب
+        </button>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal">
+        <div class="bg-[#121218] border border-white/15 w-full max-w-sm rounded-3xl p-5 shadow-2xl relative">
+            <button onclick="closeReportModal()" class="absolute top-4 left-4 text-zinc-400 hover:text-white p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-sm font-black text-red-400 flex items-center gap-2 mb-2">
+                <i class="fa-solid fa-triangle-exclamation"></i> إبلاغ عن الإعلان
+            </h3>
+            <p class="text-[10px] text-zinc-400 bg-zinc-900 border border-white/10 p-3 rounded-xl mb-4 leading-relaxed">
+                💡 يتم فحص ومراجعة كافة البلاغات لضمان بيئة عقارية آمنة ونظيفة.
+            </p>
+            <label class="block text-[10px] text-zinc-300 mb-1 font-bold">سبب الإبلاغ</label>
+            <textarea id="r-reason" rows="3" placeholder="اكتب السبب باختصار..." class="w-full bg-[#09090b] border border-white/10 text-xs text-white p-3 rounded-xl focus:border-white focus:outline-none resize-none mb-3"></textarea>
+            <label class="block text-[10px] text-zinc-300 mb-1 font-bold">رقم هاتفك للتواصل</label>
+            <input type="tel" id="r-phone" placeholder="01xxxxxxxxx" class="w-full bg-[#09090b] border border-white/10 text-xs text-white p-3 rounded-xl focus:border-white focus:outline-none mb-4 text-left" dir="ltr">
+            <button onclick="submitReport()" id="report-btn" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-xs transition shadow-lg">
+                إرسال البلاغ
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE",
+            authDomain: "youssef-4170d.firebaseapp.com",
+            projectId: "youssef-4170d",
+            storageBucket: "youssef-4170d.appspot.com",
+            appId: "1:333881327588:android:e52a39b64cccd975f551f1"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get('id');
+
+        let currentAdUserId = "";
+        let currentCollection = "ads";
+        let isFavorite = false;
+        let swiperInstance = null;
+        let propertyTitle = "";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initFavoritesState();
+            if (id) {
+                fetchPropertyData();
+                registerUniqueView();
+            } else {
+                document.getElementById('p-title').innerText = "عذراً، لم يتم تحديد معرف العقار المطلوب!";
+            }
+        });
+
+        function registerUniqueView() {
+            if (!id) return;
+            const viewedAds = JSON.parse(localStorage.getItem('aqaro_viewed_ads') || '{}');
+            const now = new Date().getTime();
+            if (!viewedAds[id] || (now - viewedAds[id] > 24 * 60 * 60 * 1000)) {
+                setTimeout(() => {
+                    db.collection(currentCollection).doc(id).update({
+                        views: firebase.firestore.FieldValue.increment(1)
+                    }).then(() => {
+                        viewedAds[id] = now;
+                        localStorage.setItem('aqaro_viewed_ads', JSON.stringify(viewedAds));
+                    }).catch(() => {
+                        db.collection('premium_ads').doc(id).update({
+                            views: firebase.firestore.FieldValue.increment(1)
+                        }).catch(e => console.log(e));
+                    });
+                }, 3000);
+            }
+        }
+
+        function initFavoritesState() {
+            const favs = JSON.parse(localStorage.getItem('aqaro_favs') || '[]');
+            isFavorite = favs.includes(id);
+            updateFavIcon();
+        }
+
+        function toggleFavorite(targetId = id, event = null) {
+            if (event) event.stopPropagation();
+            let favs = JSON.parse(localStorage.getItem('aqaro_favs') || '[]');
+            if (favs.includes(targetId)) {
+                favs = favs.filter(f => f !== targetId);
+                if (targetId === id) isFavorite = false;
+            } else {
+                if (targetId) favs.push(targetId);
+                if (targetId === id) isFavorite = true;
+            }
+            localStorage.setItem('aqaro_favs', JSON.stringify(favs));
+            updateFavIcon();
+        }
+
+        function updateFavIcon() {
+            const icon = document.getElementById('fav-icon');
+            const btn = document.getElementById('fav-btn');
+            if (isFavorite) {
+                icon.className = "fa-solid fa-heart text-red-500 text-lg";
+                btn.classList.add('border-red-500/50');
+            } else {
+                icon.className = "fa-regular fa-heart text-white text-lg";
+                btn.classList.remove('border-red-500/50');
+            }
+        }
+
+        function shareProperty() {
+            if (navigator.share) {
+                navigator.share({
+                    title: propertyTitle || 'عقار مميز عبر Aqaro',
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert("تم نسخ رابط العقار إلى الحافظة بنجاح! 📋");
+            }
+        }
+
+        function fetchPropertyData() {
+            db.collection('ads').doc(id).onSnapshot(doc => {
+                if (doc.exists) {
+                    currentCollection = "ads";
+                    renderData(doc.data());
+                } else {
+                    db.collection('premium_ads').doc(id).onSnapshot(pDoc => {
+                        if (pDoc.exists) {
+                            currentCollection = "premium_ads";
+                            renderData(pDoc.data());
+                        } else {
+                            document.getElementById('p-title').innerText = "عذراً، هذا الإعلان لم يعد متوفراً أو تم حذفه.";
+                        }
+                    });
+                }
+            });
+        }
+
+        function renderData(data) {
+            propertyTitle = data.title || "عقار مميز";
+            document.getElementById('p-title').innerText = propertyTitle;
+            document.getElementById('p-price').innerText = Number(data.price || 0).toLocaleString('ar-EG');
+            document.getElementById('p-views').innerText = Number(data.views || 0).toLocaleString();
+            document.getElementById('p-desc').innerText = data.desc || "لا يوجد وصف تفصيلي متوفر حالياً.";
+            document.getElementById('p-location').innerText = data.location || "المحافظة / المدينة";
+            document.getElementById('p-date-ago').innerText = getTimeAgo(data.createdAt);
+
+            if (currentCollection === 'premium_ads' || data.isFeatured) {
+                document.getElementById('p-badge').classList.remove('hidden');
+            }
+
+            // توليد بطاقات المواصفات بذكاء بناءً على محتوى فايربيس
+            const specs = data.specs || {};
+            const specsWrapper = document.getElementById('specs-wrapper');
+            let specsHtml = '';
+
+            // استخراج المساحة إن وجدت
+            const areaVal = specs['المساحة'] || specs['مساحة العقار'] || data.area;
+            if (areaVal) {
+                specsHtml += `
+                    <div class="bg-[#121218] p-4 rounded-2xl text-center border border-white/10 shadow-lg">
+                        <i class="fa-solid fa-ruler-combined text-sm text-cyan-400 mb-1.5 block"></i>
+                        <span class="block font-black text-lg text-white">${areaVal} م²</span>
+                        <span class="block text-[11px] text-zinc-400 font-bold mt-0.5">المساحة</span>
+                    </div>
+                `;
+            }
+
+            // استخراج الغرف إن وجدت
+            const roomsVal = specs['عدد الغرف'] || specs['غرف النوم'] || data.rooms;
+            if (roomsVal) {
+                specsHtml += `
+                    <div class="bg-[#121218] p-4 rounded-2xl text-center border border-white/10 shadow-lg">
+                        <i class="fa-solid fa-bed text-sm text-cyan-400 mb-1.5 block"></i>
+                        <span class="block font-black text-lg text-white">${roomsVal}</span>
+                        <span class="block text-[11px] text-zinc-400 font-bold mt-0.5">غرف النوم</span>
+                    </div>
+                `;
+            }
+
+            // استخراج الحمامات إن وجدت
+            const bathsVal = specs['عدد الحمامات'] || specs['الحمامات'] || data.baths;
+            if (bathsVal) {
+                specsHtml += `
+                    <div class="bg-[#121218] p-4 rounded-2xl text-center border border-white/10 shadow-lg">
+                        <i class="fa-solid fa-bath text-sm text-cyan-400 mb-1.5 block"></i>
+                        <span class="block font-black text-lg text-white">${bathsVal}</span>
+                        <span class="block text-[11px] text-zinc-400 font-bold mt-0.5">الحمامات</span>
+                    </div>
+                `;
+            }
+
+            // إذا لم تتوفر المساحة أو الغرف الأساسية، نعرض التصنيف الرئيسي كبديل متناسق
+            if (!areaVal && !roomsVal && !bathsVal) {
+                specsHtml += `
+                    <div class="bg-[#121218] p-4 rounded-2xl text-center border border-white/10 shadow-lg col-span-3">
+                        <i class="fa-solid fa-building text-sm text-cyan-400 mb-1.5 block"></i>
+                        <span class="block font-black text-sm text-white">${data.mainType || 'عقار سكني'}</span>
+                        <span class="block text-[11px] text-zinc-400 font-bold mt-0.5">نوع العقار</span>
+                    </div>
+                `;
+                specsWrapper.className = "grid grid-cols-1";
+            } else {
+                specsWrapper.className = "grid grid-cols-3 gap-3";
+            }
+            specsWrapper.innerHTML = specsHtml;
+
+            // توليد المواصفات الإضافية الديناميكية المتبقية من فايربيس
+            const dynSection = document.getElementById('dynamic-specs-section');
+            const specsGrid = document.getElementById('specs-grid');
+            specsGrid.innerHTML = '';
+            let hasDynFields = false;
+
+            Object.keys(specs).forEach(key => {
+                if (key.includes('غرف') || key.includes('حمامات') || key.includes('المساحة')) return;
+                if (specs[key] && String(specs[key]).trim() !== '') {
+                    hasDynFields = true;
+                    specsGrid.innerHTML += `
+                        <div class="bg-[#181822] border border-white/10 p-3 rounded-xl flex flex-col justify-between space-y-1">
+                            <span class="text-[10px] text-zinc-400 font-bold block">${key}</span>
+                            <span class="text-xs text-white font-black block break-words leading-tight">${specs[key]}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            if (hasDynFields) dynSection.classList.remove('hidden');
+            else dynSection.classList.add('hidden');
+
+            // إدارة المرفقات والملفات الهندسية
+            const fileUrl = data.pdfFile || '';
+            const attachSection = document.getElementById('attachments-section');
+            const pdfBtn = document.getElementById('pdf-btn');
+            const mpBox = document.getElementById('masterplan-box');
+
+            pdfBtn.classList.add('hidden');
+            mpBox.classList.add('hidden');
+            attachSection.classList.add('hidden');
+
+            if (fileUrl !== '') {
+                attachSection.classList.remove('hidden');
+                if (fileUrl.toLowerCase().includes('.pdf') || fileUrl.includes('pdf')) {
+                    pdfBtn.href = fileUrl;
+                    pdfBtn.classList.remove('hidden');
+                } else {
+                    document.getElementById('masterplan-img').src = fileUrl;
+                    document.getElementById('masterplan-link').href = fileUrl;
+                    mpBox.classList.remove('hidden');
+                }
+            }
+
+            // عرض الصور بالسوايبر
+            const images = data.allImages || (data.image ? [data.image] : ['https://via.placeholder.com/800x600?text=Aqaro']);
+            const sliderWrapper = document.getElementById('p-slider');
+            
+            sliderWrapper.innerHTML = images.map((imgUrl, index) => `
+                <div class="swiper-slide h-full">
+                    <a data-fancybox="gallery" href="${imgUrl}" class="block w-full h-full">
+                        <img src="${imgUrl}" class="w-full h-full object-cover" alt="صورة العقار ${index + 1}">
+                    </a>
+                </div>
+            `).join('');
+
+            if (swiperInstance) swiperInstance.destroy();
+            swiperInstance = new Swiper(".mySwiper", {
+                loop: images.length > 1,
+                autoplay: images.length > 1 ? { delay: 4000, disableOnInteraction: false } : false,
+                pagination: { el: ".swiper-pagination", type: "fraction" },
+            });
+
+            Fancybox.bind("[data-fancybox]", { Hash: false, Thumbs: false });
+
+            // أزرار التواصل
+            const phone = data.phone || "";
+            if (phone) {
+                document.getElementById('wa-btn').onclick = () => window.open(`https://wa.me/2${phone}?text=مرحباً، أنا مهتم بعقاركم: ${encodeURIComponent(propertyTitle)}`, '_blank');
+                document.getElementById('call-btn').onclick = () => window.open(`tel:${phone}`, '_self');
+            } else {
+                document.getElementById('wa-btn').style.display = 'none';
+                document.getElementById('call-btn').style.display = 'none';
+            }
+
+            // بيانات الوسيط العقاري
+            if (data.userId) {
+                currentAdUserId = data.userId;
+                document.getElementById('chat-btn').onclick = () => {
+                    window.location.href = `direct_chat.html?adId=${id}&brokerId=${currentAdUserId}`;
+                };
+                document.getElementById('broker-section').onclick = () => {
+                    window.location.href = `broker.html?id=${currentAdUserId}`;
+                };
+
+                db.collection('users').doc(data.userId).get().then(uDoc => {
+                    if (uDoc.exists) {
+                        const uData = uDoc.data();
+                        document.getElementById('b-name').innerText = uData.name || "مستشار معتمد";
+                        document.getElementById('b-img').src = uData.profileImg || "https://via.placeholder.com/60";
+                        if (uData.createdAt) {
+                            try {
+                                const d = uData.createdAt.toDate ? uData.createdAt.toDate() : new Date(uData.createdAt);
+                                document.getElementById('b-date').innerText = `عضو معتمد منذ ${d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' })}`;
+                            } catch(e) {
+                                document.getElementById('b-date').innerText = "وسيط عقاري معتمد";
+                            }
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('b-name').innerText = "إدارة المنصة";
+                document.getElementById('b-date').innerText = "إعلان رسمي معتمد";
+                document.getElementById('chat-btn').onclick = () => alert("خدمة الدردشة غير متوفرة لهذا الإعلان.");
+            }
+
+            loadRelatedProperties(data.subType, data.mainType, id);
+        }
+
+        function getTimeAgo(timestamp) {
+            if (!timestamp) return 'حديثاً';
+            try {
+                const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                const diff = Math.floor((new Date() - date) / 1000);
+                if (diff < 60) return 'منذ لحظات';
+                const m = Math.floor(diff / 60);
+                if (m < 60) return `منذ ${m} دقيقة`;
+                const h = Math.floor(m / 60);
+                if (h < 24) return `منذ ${h} ساعة`;
+                return `منذ ${Math.floor(h / 24)} يوم`;
+            } catch(e) {
+                return 'منذ فترة';
+            }
+        }
+
+        async function loadRelatedProperties(subType, mainType, currentId) {
+            const list = document.getElementById('suggest-grid');
+            const section = document.getElementById('related-section');
+            let docs = [];
+
+            try {
+                if (subType) {
+                    const subQs = await db.collection(currentCollection).where('subType', '==', subType).limit(5).get();
+                    subQs.forEach(d => { if (d.id !== currentId) docs.push(d); });
+                }
+                if (docs.length === 0 && mainType) {
+                    const mainQs = await db.collection(currentCollection).where('mainType', '==', mainType).limit(5).get();
+                    mainQs.forEach(d => { if (d.id !== currentId) docs.push(d); });
+                }
+
+                if (docs.length === 0) {
+                    section.classList.add('hidden');
+                    return;
+                }
+
+                const favsList = JSON.parse(localStorage.getItem('aqaro_favs') || '[]');
+                let html = '';
+                docs.slice(0, 4).forEach(doc => {
+                    const item = doc.data();
+                    const imgs = item.allImages || (item.image ? [item.image] : []);
+                    const img = imgs[0] || 'https://via.placeholder.com/300x200?text=Aqaro';
+                    const isFav = favsList.includes(doc.id);
+
+                    html += `
+                        <div class="bg-[#121218] rounded-2xl overflow-hidden border border-white/10 cursor-pointer active:scale-95 transition flex flex-col justify-between shadow-lg group" onclick="location.href='details.html?id=${doc.id}'">
+                            <div class="relative w-full h-32 bg-zinc-900 overflow-hidden">
+                                <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                                <button onclick="toggleFavorite('${doc.id}', event)" class="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-black/80 rounded-full flex items-center justify-center text-white backdrop-blur-md border border-white/10">
+                                    <i class="${isFav ? 'fa-solid fa-heart text-red-500' : 'fa-regular fa-heart'} text-[10px]"></i>
+                                </button>
+                            </div>
+                            <div class="p-3 flex-1 flex flex-col justify-between space-y-1">
+                                <div>
+                                    <span class="text-sm font-black text-white">${Number(item.price || 0).toLocaleString('ar-EG')} <span class="text-[9px] text-zinc-400">ج.م</span></span>
+                                    <h5 class="text-[11px] font-bold text-white truncate mt-0.5">${item.title || 'عقار مميز'}</h5>
+                                </div>
+                                <div class="flex items-center justify-between text-[9px] text-zinc-400 font-medium pt-1 border-t border-white/5">
+                                    <span class="truncate"><i class="fa-solid fa-location-dot text-cyan-400 text-[8px]"></i> ${item.location || 'الموقع'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                list.innerHTML = html;
+                section.classList.remove('hidden');
+            } catch (err) {
+                section.classList.add('hidden');
+            }
+        }
+
+        function openReportModal() { document.getElementById('report-modal').style.display = 'flex'; }
+        function closeReportModal() { document.getElementById('report-modal').style.display = 'none'; }
+        
+        async function submitReport() {
+            const reason = document.getElementById('r-reason').value.trim();
+            const phone = document.getElementById('r-phone').value.trim();
+            if (!reason || !phone) {
+                alert("يرجى إدخال سبب الإبلاغ ورقم الهاتف!");
+                return;
+            }
+            const btn = document.getElementById('report-btn');
+            btn.innerText = "جاري الإرسال...";
+            btn.disabled = true;
+            try {
+                await db.collection('reports').add({
+                    adId: id,
+                    adTitle: propertyTitle,
+                    reportReason: reason,
+                    reporterPhone: phone,
+                    brokerId: currentAdUserId,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert("تم إرسال البلاغ بنجاح وسيتم مراجعته فوراً. ✅");
+                document.getElementById('r-reason').value = '';
+                document.getElementById('r-phone').value = '';
+                closeReportModal();
+            } catch(err) {
+                alert("حدث خطأ أثناء الإرسال: " + err.message);
+            }
+            btn.innerText = "إرسال البلاغ";
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

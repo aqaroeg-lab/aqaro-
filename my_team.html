@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مركز تحكم الموظف | عقاري برو</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #0d0d0d; color: white; }
+    </style>
+</head>
+<body class="p-4 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-sm bg-[#1a1a1a] p-6 rounded-3xl border border-white/5 shadow-2xl">
+        <h2 class="text-xl font-black mb-6 text-center">مركز تحكم الموظف 🏢</h2>
+        
+        <div id="team-status" class="mb-6 p-5 bg-blue-600/10 border border-blue-500/20 rounded-2xl hidden">
+            <p class="text-sm font-bold text-blue-400 mb-1">✓ أنت تعمل حالياً ضمن فريق</p>
+            <p class="text-[10px] text-gray-400">إعلانات اليوم: <span id="my-daily-ads" class="text-white font-black">0</span> / 3</p>
+            <button onclick="leaveTeam()" class="mt-4 text-red-500 text-[10px] font-bold hover:text-red-400 transition">مغادرة الفريق وفسخ الارتباط</button>
+        </div>
+
+        <div id="join-section">
+            <p class="text-[11px] text-gray-400 mb-4 text-center">أدخل كود الشركة الخاص بمديرك للانضمام للفريق وبدء النشر تحت إشرافهم.</p>
+            <input id="ref-code" type="text" placeholder="أدخل كود الشركة هنا..." class="w-full bg-[#0d0d0d] p-4 rounded-xl mb-3 text-sm border border-white/5 outline-none focus:border-blue-500 transition">
+            <button onclick="joinTeam()" class="w-full bg-blue-600 p-4 rounded-xl font-black text-sm hover:bg-blue-700 transition active:scale-95">انضمام للفريق</button>
+        </div>
+    </div>
+
+    <script>
+        // دالة الانضمام
+        async function joinTeam() {
+            const code = document.getElementById('ref-code').value.trim();
+            if (!code) return alert("يرجى إدخال الكود أولاً");
+            
+            try {
+                // التحقق هل الكود (الشركة) موجود فعلاً
+                const companyDoc = await db.collection('users').doc(code).get();
+                if(!companyDoc.exists) return alert("كود الشركة غير صحيح!");
+
+                await db.collection('users').doc(auth.currentUser.uid).update({ 
+                    parentCompanyId: code 
+                });
+                alert("تم الانضمام بنجاح!");
+                location.reload();
+            } catch (e) {
+                alert("خطأ: " + e.message);
+            }
+        }
+
+        // دالة المغادرة
+        async function leaveTeam() {
+            if(!confirm("هل أنت متأكد من مغادرة الفريق؟")) return;
+            try {
+                await db.collection('users').doc(auth.currentUser.uid).update({ 
+                    parentCompanyId: null 
+                });
+                location.reload();
+            } catch (e) {
+                alert("خطأ أثناء المغادرة");
+            }
+        }
+
+        // مراقبة حالة المستخدم
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                db.collection('users').doc(user.uid).onSnapshot(doc => {
+                    if (!doc.exists) return;
+                    const data = doc.data();
+                    
+                    if(data.parentCompanyId) {
+                        document.getElementById('team-status').classList.remove('hidden');
+                        document.getElementById('join-section').classList.add('hidden');
+                        document.getElementById('my-daily-ads').innerText = data.dailyAdsCount || 0;
+                    } else {
+                        document.getElementById('team-status').classList.add('hidden');
+                        document.getElementById('join-section').classList.remove('hidden');
+                    }
+                });
+            } else {
+                window.location.href = 'welcome.html';
+            }
+        });
+    </script>
+</body>
+</html>

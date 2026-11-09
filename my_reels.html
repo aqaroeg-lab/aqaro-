@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فيديوهاتي - Reels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #0d0d0d; color: #f8f9fa; margin: 0; direction: rtl; }
+        .video-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 15px; }
+        .video-card { background: #1a1a1a; border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); position: relative; aspect-ratio: 9/16; }
+        .thumb-video { width: 100%; height: 100%; object-fit: cover; background: #000; pointer-events: none; }
+        .video-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px; background: linear-gradient(transparent, rgba(0,0,0,0.9)); pointer-events: none; }
+        .fab-add { position: fixed; bottom: 30px; left: 30px; background: #ef4444; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); z-index: 100; cursor: pointer; }
+        .hidden { display: none !important; }
+        
+        /* شاشة العرض الكاملة */
+        #fullscreen-player { position: fixed; inset: 0; bg-color: #000; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .player-controls { position: absolute; bottom: 40px; left: 20px; right: 20px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+
+<div class="p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-black italic text-red-500">فيديوهاتي (Reels)</h1>
+        <button onclick="location.href='profile.html'" class="text-gray-500 font-bold bg-zinc-900 px-4 py-1.5 rounded-xl text-xs border border-zinc-800">رجوع</button>
+    </div>
+
+    <div id="reels-list" class="video-grid">
+        <div id="skeleton" class="col-span-2 text-center py-20 text-gray-600 italic">جاري تحميل فيديوهاتك الشخصية...</div>
+    </div>
+</div>
+
+<div id="fullscreen-overlay" class="fixed inset-0 bg-black z-[999] hidden flex flex-col justify-center items-center">
+    <button onclick="closeFullscreen()" class="absolute top-6 right-6 bg-white/10 hover:bg-white/20 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg z-[1000] transition">
+        <i class="fa-solid fa-xmark"></i>
+    </button>
+
+    <div class="relative w-full max-w-md h-full flex items-center justify-center bg-black">
+        <video id="main-player" class="w-full h-full object-contain" loop preload="auto">
+            <source id="player-source" src="" type="video/mp4">
+        </video>
+
+        <div class="player-controls space-y-3 z-[1001]">
+            <div class="flex items-center justify-between text-white text-xs px-1">
+                <span id="current-time">00:00</span>
+                <span id="total-duration">00:00</span>
+            </div>
+
+            <input type="range" id="seek-bar" value="0" min="0" max="100" class="w-full h-1.5 bg-zinc-800 accent-red-500 rounded-lg appearance-none cursor-pointer">
+
+            <div class="flex items-center justify-around text-white pt-1">
+                <button onclick="toggleMute()" id="mute-btn" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-sm transition">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+
+                <button onclick="togglePlay()" id="play-btn" class="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-base text-black font-black transition shadow-lg shadow-red-500/20">
+                    <i class="fa-solid fa-pause"></i>
+                </button>
+
+                <button onclick="restartVideo()" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-sm transition">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="fab-add" onclick="location.href='add_reel.html'">+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyBbLytLmCWW-cy3SY80Yz7HQdaqog5ONKE", projectId: "youssef-4170d" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const overlay = document.getElementById('fullscreen-overlay');
+    const mainPlayer = document.getElementById('main-player');
+    const playerSource = document.getElementById('player-source');
+    const playBtn = document.getElementById('play-btn');
+    const muteBtn = document.getElementById('mute-btn');
+    const seekBar = document.getElementById('seek-bar');
+    const currentTimeText = document.getElementById('current-time');
+    const totalDurationText = document.getElementById('total-duration');
+
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            loadMyReels(user.uid);
+        } else {
+            window.location.href = 'welcome.html';
+        }
+    });
+
+    function loadMyReels(uid) {
+        // 🎯 التعديل الجوهري: فلترة الفيديوهات لتجلب الخاصة بالـ userId الحالي فقط
+        db.collection('videos')
+          .where('userId', '==', uid) // 👈 السطر السحري عشان ميعرضش عقارات غيره
+          .orderBy('createdAt', 'desc')
+          .onSnapshot(snap => {
+            const list = document.getElementById('reels-list');
+            list.innerHTML = '';
+            
+            if (snap.empty) {
+                list.innerHTML = `<div class="col-span-2 text-center py-20 text-gray-500 text-xs font-bold">لم تقم برفع أي مقاطع فيديو بعد. 🎬</div>`;
+                return;
+            }
+
+            snap.forEach(doc => {
+                const v = doc.data();
+                
+                const videoHtml = `
+                    <div class="video-card cursor-pointer">
+                        <div class="w-full h-full" onclick="openFullscreen('${v.videoUrl}')">
+                            <video class="thumb-video" preload="metadata">
+                                <source src="${v.videoUrl}#t=0.1" type="video/mp4">
+                            </video>
+                            <div class="video-info">
+                                <h3 class="text-[10px] font-black text-white truncate">${v.title || 'بدون عنوان'}</h3>
+                                <p class="text-[8px] text-gray-400 font-bold"><i class="fa-solid fa-location-dot text-[7px] ml-0.5"></i> ${v.location || 'موقع غير محدد'}</p>
+                            </div>
+                        </div>
+                        <button onclick="event.stopPropagation(); deleteVideo('${doc.id}')" class="absolute top-2 left-2 bg-black/60 hover:bg-red-600/80 text-white p-2 rounded-full text-[9px] transition z-10 border border-white/5">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                list.innerHTML += videoHtml;
+            });
+        }, err => {
+            console.error("Firebase Index Required: ", err);
+        });
+    }
+
+    // 📱 دالة فتح الفيديو ملء الشاشة وتشغيله تلقائياً
+    function openFullscreen(videoUrl) {
+        playerSource.src = videoUrl;
+        mainPlayer.load();
+        overlay.classList.remove('hidden');
+        mainPlayer.play().catch(e => console.log("Auto-play blocked"));
+        playBtn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+    }
+
+    // ❌ دالة إغلاق شاشة العرض الكاملة وإيقاف الفيديو
+    function closeFullscreen() {
+        mainPlayer.pause();
+        overlay.classList.add('hidden');
+    }
+
+    // ⏯️ تشغيل وإيقاف الفيديو مؤقتاً
+    function togglePlay() {
+        if (mainPlayer.paused) {
+            mainPlayer.play();
+            playBtn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+        } else {
+            mainPlayer.pause();
+            playBtn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+        }
+    }
+
+    // 🔇🔊 كتم وفتح الصوت
+    function toggleMute() {
+        if (mainPlayer.muted) {
+            mainPlayer.muted = false;
+            muteBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i>`;
+        } else {
+            mainPlayer.muted = true;
+            muteBtn.innerHTML = `<i class="fa-solid fa-volume-xmark text-red-500"></i>`;
+        }
+    }
+
+    // 🔄 إعادة تشغيل من البداية
+    function restartVideo() {
+        mainPlayer.currentTime = 0;
+        mainPlayer.play();
+        playBtn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+    }
+
+    // ⏳ تحديث شريط التقديم والوقت لايف أثناء تشغيل الفيديو
+    mainPlayer.ontimeupdate = function() {
+        if (!isNaN(mainPlayer.duration)) {
+            const value = (mainPlayer.currentTime / mainPlayer.duration) * 100;
+            seekBar.value = value;
+            
+            // تحديث نصوص الوقت الحالي والإجمالي
+            currentTimeText.innerText = formatTime(mainPlayer.currentTime);
+            totalDurationText.innerText = formatTime(mainPlayer.duration);
+        }
+    };
+
+    // 🎛️ التقديم والتأخير عند سحب شريط الـ Seek Bar بصباعك
+    seekBar.oninput = function() {
+        const time = (seekBar.value / 100) * mainPlayer.duration;
+        mainPlayer.currentTime = time;
+    };
+
+    // دالة مساعدة لتنسيق الوقت (دقائق:ثواني)
+    function formatTime(secs) {
+        let min = Math.floor(secs / 60);
+        let sec = Math.floor(secs % 60);
+        if (min < 10) min = "0" + min;
+        if (sec < 10) sec = "0" + sec;
+        return min + ":" + sec;
+    }
+
+    async function deleteVideo(id) {
+        if(confirm('يا فرعون، هل تريد حذف هذا المقطع نهائياً من أرشيفك؟')) {
+            try {
+                await db.collection('videos').doc(id).delete();
+                alert('تم الحذف بنجاح ✓');
+            } catch(e) {
+                alert('خطأ في الحذف');
+            }
+        }
+    }
+</script>
+</body>
+</html>
